@@ -33,66 +33,90 @@
 /* the table scrolls in BOTH axes inside its own panel */
 .pt-scroll{flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--pt-card);}
 
-.pt-table{width:100%; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums;}
-.pt-table th, .pt-table td{white-space:nowrap;}
+.pt-root .pt-table{width:100%; margin:0 !important; border:none !important;
+  border-collapse:separate !important; border-spacing:0 !important;
+  background:none !important; font-variant-numeric:tabular-nums;}
+.pt-root .pt-table tr{background:none !important; border:none !important;}
+.pt-root .pt-table th, .pt-root .pt-table td{white-space:nowrap;}
 
-.pt-table thead th{
+/* !important throughout this block: the Avada theme styles bare `th`/`td`/`tr`
+   (dark header fill, red header text, zebra striping) and those rules would
+   otherwise win. Everything stays scoped under .pt-root. */
+.pt-root .pt-table thead th{
   position:sticky; top:0; z-index:3;
-  background:var(--pt-soft); border-bottom:2px solid var(--pt-bd);
-  padding:0; font-size:11px; font-weight:800; color:var(--pt-gray);
-  text-transform:uppercase; letter-spacing:.4px; text-align:right;
+  background:var(--pt-soft) !important;
+  color:var(--pt-gray) !important;
+  border:none !important; border-bottom:2px solid var(--pt-bd) !important;
+  padding:0 !important; font-size:11px !important; font-weight:800 !important;
+  text-transform:uppercase !important; letter-spacing:.4px; text-align:right;
 }
-.pt-table thead th.tm{text-align:left; left:0; z-index:4;}
-.pt-sortbtn{
-  width:100%; padding:10px 8px; background:none; border:none; color:inherit;
-  font:inherit; text-transform:inherit; letter-spacing:inherit; text-align:inherit;
+.pt-root .pt-table thead th.tm{text-align:left; left:0; z-index:4;}
+.pt-root .pt-sortbtn{
+  width:100%; padding:10px 8px; background:none !important; border:none !important;
+  color:var(--pt-gray) !important; text-shadow:none !important;
+  font:inherit; font-size:11px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.4px; text-align:inherit;
   display:flex; align-items:center; justify-content:flex-end; gap:3px; min-height:40px;
 }
-th.tm .pt-sortbtn{justify-content:flex-start; padding-left:12px;}
-.pt-sortbtn .ar{opacity:0; font-size:9px;}
-th[aria-sort] .pt-sortbtn{color:var(--pt-black);}
-th[aria-sort] .pt-sortbtn .ar{opacity:1; color:var(--pt-red);}
+.pt-root th.tm .pt-sortbtn{justify-content:flex-start; padding-left:12px;}
+.pt-root .pt-sortbtn .ar{opacity:0; font-size:9px;}
+/* active column keeps the SAME text colour as the others — the red arrow is the
+   only sort indicator, so nothing goes low-contrast against the header fill */
+.pt-root th[aria-sort] .pt-sortbtn .ar{opacity:1; color:var(--pt-red) !important;}
 
 /* sticky team column */
-.pt-table .tm{position:sticky; left:0; background:var(--pt-card); z-index:2;
-  border-right:1px solid var(--pt-bd2); text-align:left;}
-.pt-table thead .tm{background:var(--pt-soft);}
+.pt-root .pt-table .tm{position:sticky; left:0; z-index:2;
+  border-right:1px solid var(--pt-bd2) !important; text-align:left;}
+.pt-root .pt-table tbody td.tm{background:var(--pt-card) !important;}
+.pt-root .pt-table thead th.tm{background:var(--pt-soft) !important;}
 
-.pt-table tbody td{padding:0 8px; height:44px; border-bottom:1px solid var(--pt-bd2);
-  text-align:right; font-size:14px; font-weight:700; color:#33404d;}
-.pt-table tbody td.tm{padding:0;}
-.pt-table tbody tr.tr-team:hover td{background:#fbfcfd;}
-.pt-table tbody tr.tr-team:hover td.tm{background:#fbfcfd;}
+.pt-root .pt-table tbody td{
+  padding:0 8px !important; height:44px;
+  background:var(--pt-card) !important; color:#33404d !important;
+  border:none !important; border-bottom:1px solid var(--pt-bd2) !important;
+  text-align:right; font-size:14px !important; font-weight:700 !important;
+}
+.pt-root .pt-table tbody td.tm{padding:0 !important;}
+.pt-root .pt-table tbody tr.tr-team:hover td{background:#fbfcfd !important;}
 
 /* team cell = the clickable control */
-.pt-teambtn{display:flex; align-items:center; gap:8px; width:100%; height:44px;
-  padding:0 10px 0 8px; background:none; border:none; text-align:left;}
-.pt-rank{flex:0 0 20px; font-size:12px; font-weight:800; color:var(--pt-gray); text-align:right;}
-.pt-chip{flex:0 0 4px; height:22px; border-radius:2px;}
-.pt-name{font-size:14.5px; font-weight:800; text-transform:uppercase; letter-spacing:.2px; color:var(--pt-black);}
-.pt-caret{flex:0 0 auto; font-size:9px; color:var(--pt-gray); transition:transform .15s;}
-tr.open .pt-caret{transform:rotate(90deg); color:var(--pt-red);}
+.pt-root .pt-teambtn{display:flex; align-items:center; gap:8px; width:100%; height:44px;
+  padding:0 10px 0 8px; background:none !important; border:none !important;
+  box-shadow:none !important; text-align:left; text-transform:none;}
+.pt-root .pt-rank{flex:0 0 20px; font-size:12px; font-weight:800; color:var(--pt-gray); text-align:right;}
+.pt-root .pt-chip{display:block; flex:0 0 4px; height:22px; border-radius:2px;}
+.pt-root .pt-name{font-size:14.5px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.2px; color:var(--pt-black) !important;}
+.pt-root .pt-caret{flex:0 0 auto; font-size:9px; color:var(--pt-gray); transition:transform .15s;}
+.pt-root tr.open .pt-caret{transform:rotate(90deg); color:var(--pt-red);}
 
-td.big{font-size:16px; font-weight:800; color:var(--pt-black);}
-td.po{color:var(--pt-black); font-weight:800;}
+.pt-root .pt-table tbody td.big{font-size:16px !important; font-weight:800 !important; color:var(--pt-black) !important;}
+.pt-root .pt-table tbody td.po{font-weight:800 !important; color:var(--pt-black) !important;}
 
-/* expandable detail */
-tr.pt-detail > td{padding:0; border-bottom:1px solid var(--pt-bd); background:var(--pt-soft);}
-.pt-detail-inner{padding:12px 12px 14px;}
-.pt-dhead{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px;
-  color:var(--pt-gray); margin-bottom:8px;}
-.pt-bars{display:flex; flex-direction:column; gap:3px;}
-.pt-bar{display:flex; align-items:center; gap:8px;}
-.pt-bar .wk{flex:0 0 26px; font-size:10.5px; font-weight:800; color:var(--pt-gray); text-align:right;}
-.pt-bar .op{flex:0 0 54px; font-size:11.5px; font-weight:700; color:#33404d;}
-.pt-bar .track{flex:1 1 auto; height:16px; background:#e7ebef; border-radius:3px; overflow:hidden; min-width:40px;}
-.pt-bar .fill{height:100%; border-radius:3px;}
-.pt-bar .pv{flex:0 0 34px; font-size:12.5px; font-weight:800; text-align:right; color:var(--pt-black);}
-.pt-bar.bye .op, .pt-bar.bye .pv{color:var(--pt-gray); font-weight:700;}
-.pt-bar.bye .track{background:repeating-linear-gradient(45deg,#eef1f4,#eef1f4 4px,#e2e7ec 4px,#e2e7ec 8px);}
-.pt-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px;
+/* expandable detail — text-align must be reset: it inherits `right` from the td */
+.pt-root tr.pt-detail > td{
+  padding:0 !important; height:auto !important; text-align:left !important;
+  background:var(--pt-soft) !important;
+  border:none !important; border-bottom:1px solid var(--pt-bd) !important;
+}
+.pt-root .pt-detail-inner{padding:12px 12px 14px; text-align:left;}
+.pt-root .pt-dhead{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--pt-gray); margin-bottom:8px; text-align:left;}
+.pt-root .pt-bars{display:flex; flex-direction:column; gap:3px;}
+.pt-root .pt-bar{display:flex; align-items:center; gap:8px;}
+.pt-root .pt-bar .wk{flex:0 0 26px; font-size:10.5px; font-weight:800; color:var(--pt-gray); text-align:right;}
+.pt-root .pt-bar .op{flex:0 0 54px; font-size:11.5px; font-weight:700; color:#33404d; text-align:left;}
+/* track + fill are <span>s — they MUST be display:block or height/width are
+   ignored (inline elements have no box) and the bar renders empty. */
+.pt-root .pt-bar .track{display:block; flex:1 1 auto; height:16px; min-width:40px;
+  background:#e7ebef; border-radius:3px; overflow:hidden;}
+.pt-root .pt-bar .fill{display:block; height:16px; border-radius:3px; min-width:2px;}
+.pt-root .pt-bar .pv{flex:0 0 34px; font-size:12.5px; font-weight:800; text-align:right; color:var(--pt-black);}
+.pt-root .pt-bar.bye .op, .pt-root .pt-bar.bye .pv{color:var(--pt-gray); font-weight:700;}
+.pt-root .pt-bar.bye .track{background:repeating-linear-gradient(45deg,#eef1f4,#eef1f4 4px,#e2e7ec 4px,#e2e7ec 8px);}
+.pt-root .pt-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px;
   color:var(--pt-gray); font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
-.pt-ramp{flex:0 0 90px; height:7px; border-radius:4px;
+.pt-root .pt-ramp{display:block; flex:0 0 90px; height:7px; border-radius:4px;
   background:linear-gradient(90deg,#9aa7b2,#d98a6a,#cc0000);}
 
 @media (min-width:641px){
