@@ -1,0 +1,71 @@
+name: update-implied-totals
+
+on:
+  schedule:
+    # 13:00 UTC = 9am ET / 6am PT, every day.
+    # Runs daily so line movement is picked up quickly and the workflow
+    # stays "active" (GitHub disables scheduled workflows after 60 days
+    # of repo inactivity — each run commits a new `updated` date, which counts).
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}   # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-implied-totals
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build implied-totals.json
+        run: node build-implied-totals.mjs implied-totals.json
+
+      - name: Sanity check feed
+        run: |
+          node -e "
+            const d = require('./implied-totals.json');
+            if (!d.teams || d.teams.length !== 32) throw new Error('expected 32 teams, got ' + (d.teams||[]).length);
+            const games = d.teams.reduce((s,t) => s + t.games.length, 0);
+            if (games !== 544) throw new Error('expected 544 team-games, got ' + games);
+            for (const t of d.teams) {
+              if (t.games.length !== 17) throw new Error(t.abbr + ' has ' + t.games.length + ' games');
+              if (!(t.ppg > 10 && t.ppg < 40)) throw new Error(t.abbr + ' ppg out of range: ' + t.ppg);
+              const po = Math.round((t.w15 + t.w16 + t.w17) * 10) / 10;
+              if (Math.abs(po - t.playoff) > 0.051) throw new Error(t.abbr + ' playoff mismatch');
+              const avg = Math.round((t.games.reduce((s,g) => s + g.pts, 0) / 17) * 10) / 10;
+              if (Math.abs(avg - t.ppg) > 0.051) throw new Error(t.abbr + ' ppg mismatch');
+            }
+            const live = d.teams.reduce((s,t) => s + t.games_live, 0);
+            console.log('OK — 32 teams, 544 team-games, ' + live + ' on live lines, source=' + d.source);
+          "
+
+      # Regenerate the embed + preview so the pre-rendered (crawlable) rows
+      # always match the current feed. DATA_URL is baked in, so the copy you
+      # paste into Avada is already wired to the live JSON.
+      - name: Build embed + preview page
+        env:
+          DATA_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/implied-totals.json
+        run: |
+          node build-embed.mjs implied-totals.json implied-totals-WP.html
+          node build-embed.mjs implied-totals.json index.html --page
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "implied-totals-bot"
+          git config user.email "implied-totals-bot@users.noreply.github.com"
+          git add implied-totals.json implied-totals-WP.html index.html
+          if git diff --staged --quiet; then
+            echo "no change"
+          else
+            git commit -m "chore: refresh implied totals ($(date -u +%Y-%m-%d))"
+            git push
+          fi
