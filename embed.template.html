@@ -1,0 +1,260 @@
+<!-- ================================================================
+  SHARP FOOTBALL — NFL IMPLIED TEAM TOTALS  (Avada embed fragment)
+  Paste this ENTIRE block into an Avada "Code Block" element.
+  Fragment only: <style> + one .pt-root <div> + <script>. No <html>/<head>/<body>.
+
+  SEO: the full 32-team table is PRE-RENDERED as real <tr> rows in the markup
+  below, so crawlers read it with no JavaScript. The script only adds sorting,
+  the expandable per-team breakdown, and (optionally) live line updates.
+
+  Implied total = game total / 2  -  team spread / 2
+
+  GENERATED FILE — do not hand-edit.
+  Rebuild with:  node build-embed.mjs
+================================================================= -->
+<style>
+.pt-root{
+  --pt-black:#000; --pt-red:#cc0000; --pt-bg:#f4f5f7; --pt-card:#fff;
+  --pt-soft:#f9fafb; --pt-text:#111; --pt-gray:#7f8c9a;
+  --pt-bd:#cdd5de; --pt-bd2:#dde2e8;
+  font-family:'Interstate Condensed','Oswald','Arial Narrow',sans-serif;
+  color:var(--pt-text); background:var(--pt-bg);
+  display:flex; flex-direction:column; max-height:88svh; overflow:hidden;
+  border:1px solid var(--pt-bd); border-radius:12px; -webkit-text-size-adjust:100%;
+}
+.pt-root *{box-sizing:border-box; margin:0; padding:0; font-family:inherit;}
+.pt-root button{font-family:inherit; cursor:pointer;}
+
+.pt-header{flex:0 0 auto; background:var(--pt-black); color:#fff; padding:14px 14px 12px;}
+.pt-title{font-size:20px; font-weight:800; letter-spacing:.3px; line-height:1.05; text-transform:uppercase;}
+.pt-sub{font-size:12.5px; color:#c9ced6; margin-top:4px; line-height:1.25;}
+.pt-updated{font-size:11px; color:#8f97a1; margin-top:6px; text-transform:uppercase; letter-spacing:.4px; font-weight:700;}
+
+/* the table scrolls in BOTH axes inside its own panel */
+.pt-scroll{flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--pt-card);}
+
+.pt-table{width:100%; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums;}
+.pt-table th, .pt-table td{white-space:nowrap;}
+
+.pt-table thead th{
+  position:sticky; top:0; z-index:3;
+  background:var(--pt-soft); border-bottom:2px solid var(--pt-bd);
+  padding:0; font-size:11px; font-weight:800; color:var(--pt-gray);
+  text-transform:uppercase; letter-spacing:.4px; text-align:right;
+}
+.pt-table thead th.tm{text-align:left; left:0; z-index:4;}
+.pt-sortbtn{
+  width:100%; padding:10px 8px; background:none; border:none; color:inherit;
+  font:inherit; text-transform:inherit; letter-spacing:inherit; text-align:inherit;
+  display:flex; align-items:center; justify-content:flex-end; gap:3px; min-height:40px;
+}
+th.tm .pt-sortbtn{justify-content:flex-start; padding-left:12px;}
+.pt-sortbtn .ar{opacity:0; font-size:9px;}
+th[aria-sort] .pt-sortbtn{color:var(--pt-black);}
+th[aria-sort] .pt-sortbtn .ar{opacity:1; color:var(--pt-red);}
+
+/* sticky team column */
+.pt-table .tm{position:sticky; left:0; background:var(--pt-card); z-index:2;
+  border-right:1px solid var(--pt-bd2); text-align:left;}
+.pt-table thead .tm{background:var(--pt-soft);}
+
+.pt-table tbody td{padding:0 8px; height:44px; border-bottom:1px solid var(--pt-bd2);
+  text-align:right; font-size:14px; font-weight:700; color:#33404d;}
+.pt-table tbody td.tm{padding:0;}
+.pt-table tbody tr.tr-team:hover td{background:#fbfcfd;}
+.pt-table tbody tr.tr-team:hover td.tm{background:#fbfcfd;}
+
+/* team cell = the clickable control */
+.pt-teambtn{display:flex; align-items:center; gap:8px; width:100%; height:44px;
+  padding:0 10px 0 8px; background:none; border:none; text-align:left;}
+.pt-rank{flex:0 0 20px; font-size:12px; font-weight:800; color:var(--pt-gray); text-align:right;}
+.pt-chip{flex:0 0 4px; height:22px; border-radius:2px;}
+.pt-name{font-size:14.5px; font-weight:800; text-transform:uppercase; letter-spacing:.2px; color:var(--pt-black);}
+.pt-caret{flex:0 0 auto; font-size:9px; color:var(--pt-gray); transition:transform .15s;}
+tr.open .pt-caret{transform:rotate(90deg); color:var(--pt-red);}
+
+td.big{font-size:16px; font-weight:800; color:var(--pt-black);}
+td.po{color:var(--pt-black); font-weight:800;}
+
+/* expandable detail */
+tr.pt-detail > td{padding:0; border-bottom:1px solid var(--pt-bd); background:var(--pt-soft);}
+.pt-detail-inner{padding:12px 12px 14px;}
+.pt-dhead{font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--pt-gray); margin-bottom:8px;}
+.pt-bars{display:flex; flex-direction:column; gap:3px;}
+.pt-bar{display:flex; align-items:center; gap:8px;}
+.pt-bar .wk{flex:0 0 26px; font-size:10.5px; font-weight:800; color:var(--pt-gray); text-align:right;}
+.pt-bar .op{flex:0 0 54px; font-size:11.5px; font-weight:700; color:#33404d;}
+.pt-bar .track{flex:1 1 auto; height:16px; background:#e7ebef; border-radius:3px; overflow:hidden; min-width:40px;}
+.pt-bar .fill{height:100%; border-radius:3px;}
+.pt-bar .pv{flex:0 0 34px; font-size:12.5px; font-weight:800; text-align:right; color:var(--pt-black);}
+.pt-bar.bye .op, .pt-bar.bye .pv{color:var(--pt-gray); font-weight:700;}
+.pt-bar.bye .track{background:repeating-linear-gradient(45deg,#eef1f4,#eef1f4 4px,#e2e7ec 4px,#e2e7ec 8px);}
+.pt-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px;
+  color:var(--pt-gray); font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
+.pt-ramp{flex:0 0 90px; height:7px; border-radius:4px;
+  background:linear-gradient(90deg,#9aa7b2,#d98a6a,#cc0000);}
+
+@media (min-width:641px){
+  .pt-title{font-size:24px;}
+  .pt-name{font-size:15.5px;}
+  .pt-table tbody td{font-size:15px;}
+  .pt-header{padding:16px 18px 14px;}
+  .pt-bar .op{flex:0 0 70px;}
+}
+</style>
+
+<div class="pt-root" id="ptRoot">
+  <div class="pt-header">
+    <div class="pt-title">NFL Implied Team Totals</div>
+    <div class="pt-sub">Projected points for every team, every game — straight from the sportsbook lines. Tap a team for its full 17-game slate.</div>
+    <div class="pt-updated" id="ptUpdated">Updated __UPDATED__</div>
+  </div>
+
+  <div class="pt-scroll">
+    <table class="pt-table" id="ptTable">
+      <thead>
+        <tr>
+          <th class="tm"><button class="pt-sortbtn" type="button">Team <span class="ar">▼</span></button></th>
+          <th data-k="ppg" aria-sort="descending"><button class="pt-sortbtn" type="button">Pts / Game <span class="ar">▼</span></button></th>
+          <th data-k="playoff"><button class="pt-sortbtn" type="button">Playoff Pts <span class="ar">▼</span></button></th>
+          <th data-k="w15"><button class="pt-sortbtn" type="button">Wk 15 <span class="ar">▼</span></button></th>
+          <th data-k="w16"><button class="pt-sortbtn" type="button">Wk 16 <span class="ar">▼</span></button></th>
+          <th data-k="w17"><button class="pt-sortbtn" type="button">Wk 17 <span class="ar">▼</span></button></th>
+        </tr>
+      </thead>
+      <tbody id="ptBody">
+__ROWS__
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===== CONFIG ===== */
+  // Injected at build time. Empty = run purely on the pre-rendered lines above.
+  var DATA_URL = "__DATA_URL__";
+
+  var DATA = __SEED__;
+
+  var BODY = document.getElementById("ptBody");
+  var TABLE = document.getElementById("ptTable");
+  var sortKey = "ppg", sortDir = -1;   // -1 = descending
+  var openTeam = null;
+
+  function fmt(n){ return (Math.round(n*10)/10).toFixed(1); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  /* ---- heat ramp: low = slate gray, high = Sharp red ---- */
+  var LO = 16, HI = 30;
+  function heat(v){
+    var t = Math.max(0, Math.min(1, (v - LO) / (HI - LO)));
+    var a = [154,167,178], b = [204,0,0];               // #9aa7b2 -> #cc0000
+    var c = a.map(function(x,i){ return Math.round(x + (b[i]-x)*t); });
+    return "rgb("+c[0]+","+c[1]+","+c[2]+")";
+  }
+  function width(v){
+    var t = Math.max(0, Math.min(1, (v - LO) / (HI - LO)));
+    return (8 + t*92).toFixed(1) + "%";
+  }
+
+  /* ---- 17-game breakdown ---- */
+  function detailHTML(t){
+    var rows = [];
+    var byWk = {};
+    t.games.forEach(function(g){ byWk[g.wk] = g; });
+    for (var w = 1; w <= 18; w++){
+      var g = byWk[w];
+      if (!g){
+        rows.push('<div class="pt-bar bye"><span class="wk">W'+w+'</span>'+
+          '<span class="op">BYE</span><span class="track"></span><span class="pv">—</span></div>');
+        continue;
+      }
+      rows.push('<div class="pt-bar"><span class="wk">W'+w+'</span>'+
+        '<span class="op">'+esc(g.opp)+'</span>'+
+        '<span class="track"><span class="fill" style="width:'+width(g.pts)+';background:'+heat(g.pts)+'"></span></span>'+
+        '<span class="pv">'+fmt(g.pts)+'</span></div>');
+    }
+    return '<div class="pt-detail-inner">'+
+      '<div class="pt-dhead">'+esc(t.name)+' — implied total by week &middot; '+fmt(t.ppg)+' pts / game</div>'+
+      '<div class="pt-bars">'+rows.join("")+'</div>'+
+      '<div class="pt-legend"><span>Lower</span><span class="pt-ramp"></span><span>Higher</span></div>'+
+    '</div>';
+  }
+
+  /* ---- table body ---- */
+  function rowHTML(t, i){
+    return '<tr class="tr-team'+(openTeam===t.abbr?" open":"")+'" data-abbr="'+t.abbr+'">'+
+      '<td class="tm"><button class="pt-teambtn" type="button" aria-expanded="'+(openTeam===t.abbr)+'">'+
+        '<span class="pt-rank">'+(i+1)+'</span>'+
+        '<span class="pt-chip" style="background:'+t.color+'"></span>'+
+        '<span class="pt-name">'+esc(t.name)+'</span>'+
+        '<span class="pt-caret">▶</span>'+
+      '</button></td>'+
+      '<td class="big">'+fmt(t.ppg)+'</td>'+
+      '<td class="po">'+fmt(t.playoff)+'</td>'+
+      '<td>'+fmt(t.w15)+'</td>'+
+      '<td>'+fmt(t.w16)+'</td>'+
+      '<td>'+fmt(t.w17)+'</td>'+
+    '</tr>' +
+    (openTeam===t.abbr
+      ? '<tr class="pt-detail"><td colspan="6">'+detailHTML(t)+'</td></tr>'
+      : '');
+  }
+
+  function render(){
+    var rows = DATA.teams.slice().sort(function(a,b){
+      if (sortKey === "team") return (a.name < b.name ? -1 : 1) * (sortDir === -1 ? -1 : 1);
+      var d = a[sortKey] - b[sortKey];
+      return sortDir === -1 ? -d : d;
+    });
+    BODY.innerHTML = rows.map(rowHTML).join("");
+    TABLE.querySelectorAll("thead th").forEach(function(th){
+      var isTeam = th.classList.contains("tm");
+      var k = isTeam ? "team" : th.getAttribute("data-k");
+      if (sortKey === k){
+        th.setAttribute("aria-sort", sortDir === -1 ? "descending" : "ascending");
+        th.querySelector(".ar").textContent = sortDir === -1 ? "▼" : "▲";
+      } else {
+        th.removeAttribute("aria-sort");
+      }
+    });
+  }
+
+  /* ---- interactions ---- */
+  TABLE.querySelectorAll("thead th").forEach(function(th){
+    th.querySelector(".pt-sortbtn").addEventListener("click", function(){
+      var k = th.classList.contains("tm") ? "team" : th.getAttribute("data-k");
+      if (sortKey === k) sortDir = -sortDir;
+      else { sortKey = k; sortDir = (k === "team") ? 1 : -1; }
+      render();
+    });
+  });
+
+  BODY.addEventListener("click", function(e){
+    var btn = e.target.closest(".pt-teambtn");
+    if (!btn) return;
+    var abbr = btn.closest("tr").getAttribute("data-abbr");
+    openTeam = (openTeam === abbr) ? null : abbr;
+    render();
+  });
+
+  /* ---- boot: markup is already correct; only re-render on live data ---- */
+  if (DATA_URL && typeof fetch === "function"){
+    try{
+      fetch(DATA_URL,{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
+        if (j && j.teams && j.teams.length === 32){
+          DATA = j;
+          var u = document.getElementById("ptUpdated");
+          if (u && j.updated) u.textContent = "Updated " + j.updated;
+          render();
+        }
+      }).catch(function(){});    // unreachable/bad JSON -> keep pre-rendered lines
+    }catch(e){}
+  }
+})();
+</script>
