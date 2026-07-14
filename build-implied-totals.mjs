@@ -43,7 +43,6 @@ const COLOR = {
 const NORM = { WSH: "WAS", LA: "LAR" };
 const norm = (a) => NORM[a] || a;
 const r1 = (n) => Math.round(n * 10) / 10;
-const r2 = (n) => Math.round(n * 100) / 100;
 
 const SCOREBOARD = (wk) =>
   `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${SEASON}&seasontype=2&week=${wk}`;
@@ -64,9 +63,14 @@ const base = JSON.parse(readFileSync(BASELINE, "utf8"));
 const NAME = base.names;
 
 // key: week|TEAM  -> { wk, team, opp, spread, total, implied, src }
+//
+// IMPORTANT: implied is rounded to 1 decimal HERE, once, and that rounded value
+// is canonical. Every downstream number (ppg, playoff, weekly) is derived from
+// it, so the displayed PPG is exactly the average of the displayed weekly
+// numbers. Deriving ppg from unrounded values instead lets the two disagree.
 const G = new Map();
 for (const g of base.games) {
-  G.set(`${g.wk}|${g.team}`, { ...g, src: "open" });
+  G.set(`${g.wk}|${g.team}`, { ...g, implied: r1(g.implied), src: "open" });
 }
 
 /* ---------- 2. override with live ESPN lines where posted ---------- */
@@ -121,7 +125,7 @@ if (!OFFLINE) {
         if (!G.has(k)) continue;                       // unknown team/week -> skip
         G.set(k, {
           wk, team, opp, spread, total: p.total,
-          implied: r2(p.total / 2 - spread / 2),
+          implied: r1(p.total / 2 - spread / 2),   // 1dp is canonical — see note above
           src: "live",
         });
         overrides++;
