@@ -14,9 +14,22 @@
   Paste this ENTIRE block into an Avada "Code Block" element.
   Fragment only: <style> + one .pt-root <div> + <script>. No <html>/<head>/<body>.
 
-  SEO: the full 32-team table is PRE-RENDERED as real <tr> rows in the markup
-  below, so crawlers read it with no JavaScript. The script only adds sorting,
-  the expandable per-team breakdown, and (optionally) live line updates.
+  THREE VIEWS:
+    This Week  — every team's implied total for the current week, sortable,
+                 with the week's opening number and the movement since.
+    Matchups   — the same games grouped by kickoff slot.
+    Full Season— the 17-game averages and fantasy playoff weeks 15-17.
+
+  In-season the tool opens on This Week. Before week 1 and after week 18 the
+  weekly tabs are hidden and it opens on Full Season.
+
+  PINNED: on Monday the table flips to the new week while the previous week's
+  Monday night game stays pinned at the top, clearly labelled, carrying its
+  final score until Tuesday morning.
+
+  SEO: the default view's rows AND the season table are PRE-RENDERED as real
+  markup, so crawlers read both with no JavaScript. The script adds sorting,
+  the expandable breakdowns, tab switching, and live line updates.
 
   Implied total = game total / 2  -  team spread / 2
 
@@ -28,6 +41,7 @@
   --pt-black:#000; --pt-red:#cc0000; --pt-bg:#f4f5f7; --pt-card:#fff;
   --pt-soft:#f9fafb; --pt-text:#111; --pt-gray:#7f8c9a;
   --pt-bd:#cdd5de; --pt-bd2:#dde2e8;
+  --pt-up:#1a7f37; --pt-dn:#cc0000;
   font-family:'Interstate Condensed','Oswald','Arial Narrow',sans-serif;
   color:var(--pt-text); background:var(--pt-bg);
   display:flex; flex-direction:column; max-height:88svh; overflow:hidden;
@@ -35,13 +49,26 @@
 }
 .pt-root *{box-sizing:border-box; margin:0; padding:0; font-family:inherit;}
 .pt-root button{font-family:inherit; cursor:pointer;}
+.pt-root .is-off{display:none !important;}
 
 .pt-header{flex:0 0 auto; background:var(--pt-black); color:#fff; padding:14px 14px 12px;}
 .pt-title{font-size:20px; font-weight:800; letter-spacing:.3px; line-height:1.05; text-transform:uppercase;}
 .pt-sub{font-size:12.5px; color:#c9ced6; margin-top:4px; line-height:1.25;}
 .pt-updated{font-size:11px; color:#8f97a1; margin-top:6px; text-transform:uppercase; letter-spacing:.4px; font-weight:700;}
 
-/* the table scrolls in BOTH axes inside its own panel */
+/* ---- tab bar ---- */
+.pt-tabs{flex:0 0 auto; display:flex; background:var(--pt-card); border-bottom:1px solid var(--pt-bd);}
+.pt-root .pt-tab{
+  flex:1 1 0; min-width:0; padding:11px 4px; background:none !important;
+  border:none !important; border-bottom:3px solid transparent !important;
+  box-shadow:none !important; text-shadow:none !important;
+  color:var(--pt-gray) !important; font-size:11.5px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.4px; line-height:1.1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pt-root .pt-tab.is-on{color:var(--pt-black) !important; border-bottom-color:var(--pt-red) !important;}
+
+/* the panes scroll in BOTH axes inside their own panel */
 .pt-scroll{flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--pt-card);}
 
 .pt-root .pt-table{width:100%; margin:0 !important; border:none !important;
@@ -104,6 +131,55 @@
 .pt-root .pt-table tbody td.big{font-size:16px !important; font-weight:800 !important; color:var(--pt-black) !important;}
 .pt-root .pt-table tbody td.po{font-weight:800 !important; color:var(--pt-black) !important;}
 
+/* opponent cell + movement */
+.pt-root .pt-table tbody td.opp{color:var(--pt-gray) !important; font-size:13px !important;}
+.pt-root .pt-mv{font-weight:800; font-size:13px;}
+.pt-root .pt-mv.up{color:var(--pt-up) !important;}
+.pt-root .pt-mv.dn{color:var(--pt-dn) !important;}
+.pt-root .pt-mv.flat{color:var(--pt-gray) !important;}
+
+/* rows still waiting on a real line, and bye rows: parked at the bottom */
+.pt-root tr.await td, .pt-root tr.byerow td{background:var(--pt-soft) !important; color:var(--pt-gray) !important;}
+.pt-root tr.await td.big{color:var(--pt-gray) !important;}
+.pt-root tr.byerow .pt-name{color:var(--pt-gray) !important;}
+.pt-root .pt-flag{display:inline-block; margin-left:5px; padding:1px 4px; border-radius:3px;
+  background:#eef1f4; color:var(--pt-gray); font-size:9px; font-weight:800;
+  letter-spacing:.3px; vertical-align:1px;}
+
+/* ---- pinned band: last week's leftovers ---- */
+.pt-pin{margin:10px 10px 2px; background:var(--pt-card); border:1px solid var(--pt-bd);
+  border-left:4px solid var(--pt-red); border-radius:8px; overflow:hidden;}
+.pt-pin-hd{padding:7px 10px; background:#fdf3f3; color:var(--pt-red);
+  font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.45px; line-height:1.3;}
+.pt-pin-hd .sub{display:block; color:var(--pt-gray); font-weight:700; letter-spacing:.3px; margin-top:2px;}
+.pt-pin-g{border-top:1px solid var(--pt-bd2); padding:8px 10px;}
+.pt-pin-row{display:flex; align-items:center; gap:8px;}
+.pt-pin-row + .pt-pin-row{margin-top:5px;}
+.pt-pin-row .nm{flex:1 1 auto; min-width:0; font-size:13.5px; font-weight:800;
+  text-transform:uppercase; overflow:hidden; text-overflow:ellipsis;}
+.pt-pin-row .sc{flex:0 0 30px; text-align:right; font-size:15px; font-weight:800; color:var(--pt-black);}
+.pt-pin-row .val{flex:0 0 42px; text-align:right; font-size:13.5px; font-weight:800; color:#33404d;}
+.pt-pin-ft{margin-top:6px; font-size:10.5px; font-weight:700; color:var(--pt-gray);
+  text-transform:uppercase; letter-spacing:.3px;}
+
+/* ---- matchup cards ---- */
+.pt-slot{padding:14px 12px 6px; font-size:11px; font-weight:800; color:var(--pt-gray);
+  text-transform:uppercase; letter-spacing:.5px;}
+.pt-card{margin:0 10px 8px; background:var(--pt-card); border:1px solid var(--pt-bd);
+  border-radius:8px; overflow:hidden;}
+.pt-side{display:flex; align-items:center; gap:8px; padding:9px 10px;}
+.pt-side + .pt-side{border-top:1px solid var(--pt-bd2);}
+.pt-side .pt-chip{height:20px;}
+.pt-side .nm{flex:1 1 auto; min-width:0; font-size:14px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.2px; overflow:hidden; text-overflow:ellipsis;}
+.pt-side .val{flex:0 0 46px; text-align:right; font-size:17px; font-weight:800;
+  color:var(--pt-black); font-variant-numeric:tabular-nums;}
+.pt-side .mv{flex:0 0 44px; text-align:right; font-size:11.5px; font-weight:800;}
+.pt-cfoot{display:flex; flex-wrap:wrap; gap:4px 12px; padding:7px 10px; background:var(--pt-soft);
+  border-top:1px solid var(--pt-bd2); font-size:10.5px; font-weight:700; color:var(--pt-gray);
+  text-transform:uppercase; letter-spacing:.3px;}
+.pt-cfoot b{color:#33404d; font-weight:800;}
+
 /* expandable detail — text-align must be reset: it inherits `right` from the td */
 .pt-root tr.pt-detail > td{
   padding:0 !important; height:auto !important; text-align:left !important;
@@ -125,10 +201,26 @@
 .pt-root .pt-bar .pv{flex:0 0 34px; font-size:12.5px; font-weight:800; text-align:right; color:var(--pt-black);}
 .pt-root .pt-bar.bye .op, .pt-root .pt-bar.bye .pv{color:var(--pt-gray); font-weight:700;}
 .pt-root .pt-bar.bye .track{background:repeating-linear-gradient(45deg,#eef1f4,#eef1f4 4px,#e2e7ec 4px,#e2e7ec 8px);}
+/* played weeks: solid slate = a result, not a projection */
+.pt-root .pt-bar.done .fill{background:#46586a !important;}
+.pt-root .pt-bar.done .pv{color:var(--pt-black);}
+.pt-root .pt-bar.done .op{color:var(--pt-gray);}
 .pt-root .pt-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px;
   color:var(--pt-gray); font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
+.pt-root .pt-legend.res{margin-top:5px;}
+.pt-root .pt-swatch{display:block; flex:0 0 26px; height:7px; border-radius:4px; background:#46586a;}
 .pt-root .pt-ramp{display:block; flex:0 0 90px; height:7px; border-radius:4px;
   background:linear-gradient(90deg,#9aa7b2,#d98a6a,#cc0000);}
+
+/* week-row detail: the game behind the number */
+.pt-root .pt-gline{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:2px;}
+.pt-root .pt-gline div{font-size:12px; font-weight:700; color:#33404d;}
+.pt-root .pt-gline span{color:var(--pt-gray); font-weight:800; font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.3px; display:block;}
+
+.pt-foot{flex:0 0 auto; padding:8px 12px; background:var(--pt-soft);
+  border-top:1px solid var(--pt-bd); font-size:10.5px; font-weight:700;
+  color:var(--pt-gray); text-transform:uppercase; letter-spacing:.3px;}
 
 @media (min-width:641px){
   .pt-title{font-size:24px;}
@@ -136,29 +228,64 @@
   .pt-table tbody td{font-size:15px;}
   .pt-header{padding:16px 18px 14px;}
   .pt-bar .op{flex:0 0 70px;}
+  .pt-tab{font-size:12.5px;}
+  .pt-side .nm{font-size:15px;}
 }
 </style>
 
 <div class="pt-root" id="ptRoot">
   <div class="pt-header">
-    <div class="pt-title">NFL Implied Team Totals</div>
-    <div class="pt-sub">Projected points for every team, every game — straight from the sportsbook lines. Tap a team for its full 17-game slate.</div>
+    <div class="pt-title" id="ptTitle">NFL Implied Team Totals</div>
+    <div class="pt-sub" id="ptSub">Projected points for every team, every game — straight from the sportsbook lines. Tap a team for its full 17-game slate.</div>
     <div class="pt-updated" id="ptUpdated">Updated 8/11 Tue</div>
   </div>
 
-  <div class="pt-scroll">
-    <table class="pt-table" id="ptTable">
-      <thead>
-        <tr>
-          <th class="tm"><button class="pt-sortbtn" type="button">Team <span class="ar">▼</span></button></th>
-          <th data-k="ppg" aria-sort="descending"><button class="pt-sortbtn" type="button">Pts / Game <span class="ar">▼</span></button></th>
-          <th data-k="playoff"><button class="pt-sortbtn" type="button">Playoff Pts <span class="ar">▼</span></button></th>
-          <th data-k="w15"><button class="pt-sortbtn" type="button">Wk 15 <span class="ar">▼</span></button></th>
-          <th data-k="w16"><button class="pt-sortbtn" type="button">Wk 16 <span class="ar">▼</span></button></th>
-          <th data-k="w17"><button class="pt-sortbtn" type="button">Wk 17 <span class="ar">▼</span></button></th>
-        </tr>
-      </thead>
-      <tbody id="ptBody">
+  <div class="pt-tabs is-off" id="ptTabs">
+    <button class="pt-tab" type="button" data-tab="week" id="ptTabWeek">This Week</button>
+    <button class="pt-tab" type="button" data-tab="games">Matchups</button>
+    <button class="pt-tab is-on" type="button" data-tab="season">Full Season</button>
+  </div>
+
+  <div class="pt-scroll" id="ptScroll">
+
+    <div class="pt-pane is-off" id="ptPaneWeek">
+      <div id="ptPinWeek"></div>
+      <table class="pt-table" id="ptWeekTable">
+        <thead>
+          <tr>
+            <th class="tm"><button class="pt-sortbtn" type="button">Team <span class="ar">▼</span></button></th>
+            <th data-k="opp"><button class="pt-sortbtn" type="button">Opp <span class="ar">▼</span></button></th>
+            <th data-k="implied" aria-sort="descending"><button class="pt-sortbtn" type="button">Implied <span class="ar">▼</span></button></th>
+            <th data-k="open"><button class="pt-sortbtn" type="button">Open <span class="ar">▼</span></button></th>
+            <th data-k="move"><button class="pt-sortbtn" type="button">Move <span class="ar">▼</span></button></th>
+          </tr>
+        </thead>
+        <tbody id="ptWeekBody">
+
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pt-pane is-off" id="ptPaneGames">
+      <div id="ptPinGames"></div>
+      <div id="ptCards">
+
+      </div>
+    </div>
+
+    <div class="pt-pane" id="ptPaneSeason">
+      <table class="pt-table" id="ptTable">
+        <thead>
+          <tr>
+            <th class="tm"><button class="pt-sortbtn" type="button">Team <span class="ar">▼</span></button></th>
+            <th data-k="ppg" aria-sort="descending" id="ptThPpg"><button class="pt-sortbtn" type="button">Pts / Game <span class="ar">▼</span></button></th>
+            <th data-k="playoff"><button class="pt-sortbtn" type="button">Playoff Pts <span class="ar">▼</span></button></th>
+            <th data-k="w15"><button class="pt-sortbtn" type="button">Wk 15 <span class="ar">▼</span></button></th>
+            <th data-k="w16"><button class="pt-sortbtn" type="button">Wk 16 <span class="ar">▼</span></button></th>
+            <th data-k="w17"><button class="pt-sortbtn" type="button">Wk 17 <span class="ar">▼</span></button></th>
+          </tr>
+        </thead>
+        <tbody id="ptBody">
         <tr class="tr-team" data-abbr="LAR"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">1</span><span class="pt-chip" style="background:#003594"></span><span class="pt-name">Rams</span><span class="pt-caret">&#9654;</span></button></td><td class="big">26.7</td><td class="po">78.8</td><td>29.3</td><td>23.0</td><td>26.5</td></tr>
         <tr class="tr-team" data-abbr="BUF"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">2</span><span class="pt-chip" style="background:#00338D"></span><span class="pt-name">Bills</span><span class="pt-caret">&#9654;</span></button></td><td class="big">26.1</td><td class="po">79.0</td><td>27.5</td><td>24.0</td><td>27.5</td></tr>
         <tr class="tr-team" data-abbr="DET"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">3</span><span class="pt-chip" style="background:#0076B6"></span><span class="pt-name">Lions</span><span class="pt-caret">&#9654;</span></button></td><td class="big">26.1</td><td class="po">75.0</td><td>24.0</td><td>27.0</td><td>24.0</td></tr>
@@ -170,9 +297,9 @@
         <tr class="tr-team" data-abbr="SEA"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">9</span><span class="pt-chip" style="background:#69BE28"></span><span class="pt-name">Seahawks</span><span class="pt-caret">&#9654;</span></button></td><td class="big">24.8</td><td class="po">69.5</td><td>21.0</td><td>24.5</td><td>24.0</td></tr>
         <tr class="tr-team" data-abbr="CHI"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">10</span><span class="pt-chip" style="background:#0B162A"></span><span class="pt-name">Bears</span><span class="pt-caret">&#9654;</span></button></td><td class="big">24.6</td><td class="po">74.0</td><td>24.0</td><td>24.5</td><td>25.5</td></tr>
         <tr class="tr-team" data-abbr="KC"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">11</span><span class="pt-chip" style="background:#E31837"></span><span class="pt-name">Chiefs</span><span class="pt-caret">&#9654;</span></button></td><td class="big">24.1</td><td class="po">70.8</td><td>24.0</td><td>24.8</td><td>22.0</td></tr>
-        <tr class="tr-team" data-abbr="NE"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">12</span><span class="pt-chip" style="background:#002244"></span><span class="pt-name">Patriots</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.8</td><td class="po">67.5</td><td>21.5</td><td>23.5</td><td>22.5</td></tr>
-        <tr class="tr-team" data-abbr="PHI"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">13</span><span class="pt-chip" style="background:#004C54"></span><span class="pt-name">Eagles</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.8</td><td class="po">64.5</td><td>22.5</td><td>20.0</td><td>22.0</td></tr>
-        <tr class="tr-team" data-abbr="LAC"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">14</span><span class="pt-chip" style="background:#0080C6"></span><span class="pt-name">Chargers</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.7</td><td class="po">74.8</td><td>25.0</td><td>26.3</td><td>23.5</td></tr>
+        <tr class="tr-team" data-abbr="LAC"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">12</span><span class="pt-chip" style="background:#0080C6"></span><span class="pt-name">Chargers</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.8</td><td class="po">74.8</td><td>25.0</td><td>26.3</td><td>23.5</td></tr>
+        <tr class="tr-team" data-abbr="NE"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">13</span><span class="pt-chip" style="background:#002244"></span><span class="pt-name">Patriots</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.8</td><td class="po">67.5</td><td>21.5</td><td>23.5</td><td>22.5</td></tr>
+        <tr class="tr-team" data-abbr="PHI"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">14</span><span class="pt-chip" style="background:#004C54"></span><span class="pt-name">Eagles</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.8</td><td class="po">64.5</td><td>22.5</td><td>20.0</td><td>22.0</td></tr>
         <tr class="tr-team" data-abbr="JAX"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">15</span><span class="pt-chip" style="background:#006778"></span><span class="pt-name">Jaguars</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.5</td><td class="po">70.6</td><td>20.3</td><td>24.3</td><td>26.0</td></tr>
         <tr class="tr-team" data-abbr="WAS"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">16</span><span class="pt-chip" style="background:#5A1414"></span><span class="pt-name">Commanders</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.5</td><td class="po">69.5</td><td>25.0</td><td>22.0</td><td>22.5</td></tr>
         <tr class="tr-team" data-abbr="IND"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">17</span><span class="pt-chip" style="background:#002C5F"></span><span class="pt-name">Colts</span><span class="pt-caret">&#9654;</span></button></td><td class="big">23.4</td><td class="po">73.0</td><td>24.5</td><td>25.5</td><td>23.0</td></tr>
@@ -182,7 +309,7 @@
         <tr class="tr-team" data-abbr="DEN"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">21</span><span class="pt-chip" style="background:#FB4F14"></span><span class="pt-name">Broncos</span><span class="pt-caret">&#9654;</span></button></td><td class="big">22.3</td><td class="po">65.5</td><td>23.0</td><td>22.5</td><td>20.0</td></tr>
         <tr class="tr-team" data-abbr="NYG"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">22</span><span class="pt-chip" style="background:#0B2265"></span><span class="pt-name">Giants</span><span class="pt-caret">&#9654;</span></button></td><td class="big">22.1</td><td class="po">67.5</td><td>22.5</td><td>22.5</td><td>22.5</td></tr>
         <tr class="tr-team" data-abbr="NO"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">23</span><span class="pt-chip" style="background:#D3BC8D"></span><span class="pt-name">Saints</span><span class="pt-caret">&#9654;</span></button></td><td class="big">21.5</td><td class="po">67.5</td><td>21.0</td><td>25.0</td><td>21.5</td></tr>
-        <tr class="tr-team" data-abbr="PIT"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">24</span><span class="pt-chip" style="background:#FFB612"></span><span class="pt-name">Steelers</span><span class="pt-caret">&#9654;</span></button></td><td class="big">21.5</td><td class="po">66.5</td><td>22.0</td><td>22.5</td><td>22.0</td></tr>
+        <tr class="tr-team" data-abbr="PIT"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">24</span><span class="pt-chip" style="background:#FFB612"></span><span class="pt-name">Steelers</span><span class="pt-caret">&#9654;</span></button></td><td class="big">21.4</td><td class="po">66.5</td><td>22.0</td><td>22.5</td><td>22.0</td></tr>
         <tr class="tr-team" data-abbr="ATL"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">25</span><span class="pt-chip" style="background:#A71930"></span><span class="pt-name">Falcons</span><span class="pt-caret">&#9654;</span></button></td><td class="big">21.2</td><td class="po">66.5</td><td>21.5</td><td>22.0</td><td>23.0</td></tr>
         <tr class="tr-team" data-abbr="CAR"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">26</span><span class="pt-chip" style="background:#0085CA"></span><span class="pt-name">Panthers</span><span class="pt-caret">&#9654;</span></button></td><td class="big">20.8</td><td class="po">60.0</td><td>22.5</td><td>19.0</td><td>18.5</td></tr>
         <tr class="tr-team" data-abbr="TEN"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">27</span><span class="pt-chip" style="background:#0C2340"></span><span class="pt-name">Titans</span><span class="pt-caret">&#9654;</span></button></td><td class="big">20.6</td><td class="po">64.0</td><td>23.0</td><td>20.5</td><td>20.5</td></tr>
@@ -191,9 +318,13 @@
         <tr class="tr-team" data-abbr="CLE"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">30</span><span class="pt-chip" style="background:#311D00"></span><span class="pt-name">Browns</span><span class="pt-caret">&#9654;</span></button></td><td class="big">18.7</td><td class="po">55.3</td><td>18.0</td><td>16.8</td><td>20.5</td></tr>
         <tr class="tr-team" data-abbr="NYJ"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">31</span><span class="pt-chip" style="background:#125740"></span><span class="pt-name">Jets</span><span class="pt-caret">&#9654;</span></button></td><td class="big">18.5</td><td class="po">56.5</td><td>21.5</td><td>17.0</td><td>18.0</td></tr>
         <tr class="tr-team" data-abbr="ARI"><td class="tm"><button class="pt-teambtn" type="button" aria-expanded="false"><span class="pt-rank">32</span><span class="pt-chip" style="background:#97233F"></span><span class="pt-name">Cardinals</span><span class="pt-caret">&#9654;</span></button></td><td class="big">18.4</td><td class="po">60.0</td><td>20.0</td><td>19.5</td><td>20.5</td></tr>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
+
   </div>
+
+  <div class="pt-foot" id="ptFoot">Implied total = game total &divide; 2 &minus; team spread &divide; 2.</div>
 </div>
 
 <script>
@@ -204,16 +335,33 @@
   // Injected at build time. Empty = run purely on the pre-rendered lines above.
   var DATA_URL = "https://RMSummerlin.github.io/impliedseasontotals/implied-totals.json";
 
-  var DATA = {"updated":"8/11 Tue","season":2026,"source":"mixed","teams":[{"abbr":"LAR","name":"Rams","color":"#003594","ppg":26.7,"playoff":78.8,"w15":29.3,"w16":23,"w17":26.5,"games":[{"wk":1,"opp":"SF","pts":26},{"wk":2,"opp":"NYG","pts":28.5},{"wk":3,"opp":"DEN","pts":24.3},{"wk":4,"opp":"PHI","pts":24.5},{"wk":5,"opp":"BUF","pts":28.3},{"wk":6,"opp":"ARI","pts":30.5},{"wk":7,"opp":"LV","pts":27},{"wk":8,"opp":"LAC","pts":26.5},{"wk":9,"opp":"WAS","pts":27.5},{"wk":10,"opp":"ARI","pts":29},{"wk":12,"opp":"GB","pts":26.5},{"wk":13,"opp":"KC","pts":26},{"wk":14,"opp":"SF","pts":26},{"wk":15,"opp":"DAL","pts":29.3},{"wk":16,"opp":"SEA","pts":23},{"wk":17,"opp":"TB","pts":26.5},{"wk":18,"opp":"SEA","pts":23.8}]},{"abbr":"BUF","name":"Bills","color":"#00338D","ppg":26.1,"playoff":79,"w15":27.5,"w16":24,"w17":27.5,"games":[{"wk":1,"opp":"HOU","pts":23},{"wk":2,"opp":"DET","pts":27.8},{"wk":3,"opp":"LAC","pts":25.8},{"wk":4,"opp":"NE","pts":26.3},{"wk":5,"opp":"LAR","pts":25.3},{"wk":6,"opp":"LV","pts":27},{"wk":8,"opp":"BAL","pts":27},{"wk":9,"opp":"MIN","pts":25.8},{"wk":10,"opp":"NYJ","pts":26.8},{"wk":11,"opp":"MIA","pts":29.5},{"wk":12,"opp":"KC","pts":26.5},{"wk":13,"opp":"NE","pts":23.5},{"wk":14,"opp":"GB","pts":24},{"wk":15,"opp":"CHI","pts":27.5},{"wk":16,"opp":"DEN","pts":24},{"wk":17,"opp":"MIA","pts":27.5},{"wk":18,"opp":"NYJ","pts":26.8}]},{"abbr":"DET","name":"Lions","color":"#0076B6","ppg":26.1,"playoff":75,"w15":24,"w16":27,"w17":24,"games":[{"wk":1,"opp":"NO","pts":28.3},{"wk":2,"opp":"BUF","pts":24.8},{"wk":3,"opp":"NYJ","pts":27.5},{"wk":4,"opp":"CAR","pts":25.3},{"wk":5,"opp":"ARI","pts":28.5},{"wk":7,"opp":"GB","pts":26.5},{"wk":8,"opp":"MIN","pts":26},{"wk":9,"opp":"MIA","pts":27},{"wk":10,"opp":"NE","pts":25},{"wk":11,"opp":"TB","pts":27},{"wk":12,"opp":"CHI","pts":27.5},{"wk":13,"opp":"ATL","pts":26},{"wk":14,"opp":"TEN","pts":27.5},{"wk":15,"opp":"MIN","pts":24},{"wk":16,"opp":"NYG","pts":27},{"wk":17,"opp":"CHI","pts":24},{"wk":18,"opp":"GB","pts":22.5}]},{"abbr":"CIN","name":"Bengals","color":"#FB4F14","ppg":26,"playoff":79,"w15":25,"w16":27,"w17":27,"games":[{"wk":1,"opp":"TB","pts":27.5},{"wk":2,"opp":"HOU","pts":22},{"wk":3,"opp":"PIT","pts":24.5},{"wk":4,"opp":"JAX","pts":27},{"wk":5,"opp":"MIA","pts":27.8},{"wk":7,"opp":"BAL","pts":24},{"wk":8,"opp":"TEN","pts":28},{"wk":9,"opp":"ATL","pts":27.5},{"wk":10,"opp":"PIT","pts":25.5},{"wk":11,"opp":"WAS","pts":27},{"wk":12,"opp":"NO","pts":27.5},{"wk":13,"opp":"CLE","pts":25},{"wk":14,"opp":"KC","pts":25},{"wk":15,"opp":"CAR","pts":25},{"wk":16,"opp":"IND","pts":27},{"wk":17,"opp":"BAL","pts":27},{"wk":18,"opp":"CLE","pts":25.5}]},{"abbr":"BAL","name":"Ravens","color":"#241773","ppg":25.9,"playoff":75.8,"w15":24.5,"w16":26.8,"w17":24.5,"games":[{"wk":1,"opp":"IND","pts":26},{"wk":2,"opp":"NO","pts":27},{"wk":3,"opp":"DAL","pts":27},{"wk":4,"opp":"TEN","pts":28},{"wk":5,"opp":"ATL","pts":26.5},{"wk":6,"opp":"CLE","pts":25.5},{"wk":7,"opp":"CIN","pts":27.5},{"wk":8,"opp":"BUF","pts":24.5},{"wk":9,"opp":"JAX","pts":27},{"wk":10,"opp":"LAC","pts":25.5},{"wk":11,"opp":"CAR","pts":25.5},{"wk":12,"opp":"HOU","pts":22},{"wk":14,"opp":"TB","pts":27.3},{"wk":15,"opp":"PIT","pts":24.5},{"wk":16,"opp":"CLE","pts":26.8},{"wk":17,"opp":"CIN","pts":24.5},{"wk":18,"opp":"PIT","pts":24.5}]},{"abbr":"DAL","name":"Cowboys","color":"#041E42","ppg":25.7,"playoff":77.6,"w15":23.3,"w16":27.3,"w17":27,"games":[{"wk":1,"opp":"NYG","pts":25.5},{"wk":2,"opp":"WAS","pts":28},{"wk":3,"opp":"BAL","pts":24.5},{"wk":4,"opp":"HOU","pts":22.5},{"wk":5,"opp":"TB","pts":28},{"wk":6,"opp":"GB","pts":24.3},{"wk":7,"opp":"PHI","pts":22.8},{"wk":8,"opp":"ARI","pts":29},{"wk":9,"opp":"IND","pts":27},{"wk":10,"opp":"SF","pts":27},{"wk":11,"opp":"TEN","pts":27.5},{"wk":12,"opp":"PHI","pts":25.5},{"wk":13,"opp":"SEA","pts":22},{"wk":15,"opp":"LAR","pts":23.3},{"wk":16,"opp":"JAX","pts":27.3},{"wk":17,"opp":"NYG","pts":27},{"wk":18,"opp":"WAS","pts":25.5}]},{"abbr":"SF","name":"49ers","color":"#AA0000","ppg":25,"playoff":67.8,"w15":22.5,"w16":21.8,"w17":23.5,"games":[{"wk":1,"opp":"LAR","pts":22.5},{"wk":2,"opp":"MIA","pts":28.5},{"wk":3,"opp":"ARI","pts":29},{"wk":4,"opp":"DEN","pts":24.5},{"wk":5,"opp":"SEA","pts":22.5},{"wk":6,"opp":"WAS","pts":28},{"wk":7,"opp":"ATL","pts":26},{"wk":9,"opp":"LV","pts":27.5},{"wk":10,"opp":"DAL","pts":25.5},{"wk":11,"opp":"MIN","pts":25},{"wk":12,"opp":"SEA","pts":22.5},{"wk":13,"opp":"NYG","pts":25.3},{"wk":14,"opp":"LAR","pts":23.5},{"wk":15,"opp":"LAC","pts":22.5},{"wk":16,"opp":"KC","pts":21.8},{"wk":17,"opp":"PHI","pts":23.5},{"wk":18,"opp":"ARI","pts":26.5}]},{"abbr":"GB","name":"Packers","color":"#203731","ppg":24.8,"playoff":73.5,"w15":28,"w16":23,"w17":22.5,"games":[{"wk":1,"opp":"MIN","pts":23.5},{"wk":2,"opp":"NYJ","pts":24},{"wk":3,"opp":"ATL","pts":27},{"wk":4,"opp":"TB","pts":24.5},{"wk":5,"opp":"CHI","pts":26.3},{"wk":6,"opp":"DAL","pts":27.3},{"wk":7,"opp":"DET","pts":24},{"wk":8,"opp":"CAR","pts":26.3},{"wk":9,"opp":"NE","pts":22.5},{"wk":10,"opp":"MIN","pts":25},{"wk":12,"opp":"LAR","pts":22},{"wk":13,"opp":"NO","pts":25},{"wk":14,"opp":"BUF","pts":25.5},{"wk":15,"opp":"MIA","pts":28},{"wk":16,"opp":"CHI","pts":23},{"wk":17,"opp":"HOU","pts":22.5},{"wk":18,"opp":"DET","pts":25}]},{"abbr":"SEA","name":"Seahawks","color":"#69BE28","ppg":24.8,"playoff":69.5,"w15":21,"w16":24.5,"w17":24,"games":[{"wk":1,"opp":"NE","pts":24},{"wk":2,"opp":"ARI","pts":27.3},{"wk":3,"opp":"WAS","pts":25},{"wk":4,"opp":"LAC","pts":24.3},{"wk":5,"opp":"SF","pts":26},{"wk":6,"opp":"DEN","pts":23},{"wk":7,"opp":"KC","pts":24.3},{"wk":8,"opp":"CHI","pts":26},{"wk":9,"opp":"ARI","pts":29.5},{"wk":10,"opp":"LV","pts":25.3},{"wk":12,"opp":"SF","pts":24},{"wk":13,"opp":"DAL","pts":26.5},{"wk":14,"opp":"NYG","pts":26.5},{"wk":15,"opp":"PHI","pts":21},{"wk":16,"opp":"LAR","pts":24.5},{"wk":17,"opp":"CAR","pts":24},{"wk":18,"opp":"LAR","pts":20.8}]},{"abbr":"CHI","name":"Bears","color":"#0B162A","ppg":24.6,"playoff":74,"w15":24,"w16":24.5,"w17":25.5,"games":[{"wk":1,"opp":"CAR","pts":24.5},{"wk":2,"opp":"MIN","pts":24.5},{"wk":3,"opp":"PHI","pts":24},{"wk":4,"opp":"NYJ","pts":27},{"wk":5,"opp":"GB","pts":23.3},{"wk":6,"opp":"ATL","pts":25.3},{"wk":7,"opp":"NE","pts":24.5},{"wk":8,"opp":"SEA","pts":21.5},{"wk":9,"opp":"TB","pts":26},{"wk":11,"opp":"NO","pts":26.5},{"wk":12,"opp":"DET","pts":25},{"wk":13,"opp":"JAX","pts":25.3},{"wk":14,"opp":"MIA","pts":26},{"wk":15,"opp":"BUF","pts":24},{"wk":16,"opp":"GB","pts":24.5},{"wk":17,"opp":"DET","pts":25.5},{"wk":18,"opp":"MIN","pts":21}]},{"abbr":"KC","name":"Chiefs","color":"#E31837","ppg":24.1,"playoff":70.8,"w15":24,"w16":24.8,"w17":22,"games":[{"wk":1,"opp":"DEN","pts":22.8},{"wk":2,"opp":"IND","pts":27},{"wk":3,"opp":"MIA","pts":26},{"wk":4,"opp":"LV","pts":24.5},{"wk":6,"opp":"LAC","pts":24.5},{"wk":7,"opp":"SEA","pts":21.3},{"wk":8,"opp":"DEN","pts":21},{"wk":9,"opp":"NYJ","pts":25.5},{"wk":10,"opp":"ATL","pts":25},{"wk":11,"opp":"ARI","pts":28},{"wk":12,"opp":"BUF","pts":24},{"wk":13,"opp":"LAR","pts":21.5},{"wk":14,"opp":"CIN","pts":23.5},{"wk":15,"opp":"NE","pts":24},{"wk":16,"opp":"SF","pts":24.8},{"wk":17,"opp":"LAC","pts":22},{"wk":18,"opp":"LV","pts":24.5}]},{"abbr":"NE","name":"Patriots","color":"#002244","ppg":23.8,"playoff":67.5,"w15":21.5,"w16":23.5,"w17":22.5,"games":[{"wk":1,"opp":"SEA","pts":20.5},{"wk":2,"opp":"PIT","pts":24},{"wk":3,"opp":"JAX","pts":22},{"wk":4,"opp":"BUF","pts":23.3},{"wk":5,"opp":"LV","pts":26.5},{"wk":6,"opp":"NYJ","pts":26},{"wk":7,"opp":"CHI","pts":23},{"wk":8,"opp":"MIA","pts":26.3},{"wk":9,"opp":"GB","pts":24},{"wk":10,"opp":"DET","pts":23.5},{"wk":12,"opp":"LAC","pts":22},{"wk":13,"opp":"BUF","pts":25},{"wk":14,"opp":"MIN","pts":24},{"wk":15,"opp":"KC","pts":21.5},{"wk":16,"opp":"NYJ","pts":23.5},{"wk":17,"opp":"DEN","pts":22.5},{"wk":18,"opp":"MIA","pts":26.5}]},{"abbr":"PHI","name":"Eagles","color":"#004C54","ppg":23.8,"playoff":64.5,"w15":22.5,"w16":20,"w17":22,"games":[{"wk":1,"opp":"WAS","pts":26},{"wk":2,"opp":"TEN","pts":23.5},{"wk":3,"opp":"CHI","pts":22.5},{"wk":4,"opp":"LAR","pts":23},{"wk":5,"opp":"JAX","pts":23.5},{"wk":6,"opp":"CAR","pts":25},{"wk":7,"opp":"DAL","pts":25.8},{"wk":8,"opp":"WAS","pts":24},{"wk":9,"opp":"NYG","pts":25},{"wk":11,"opp":"PIT","pts":24},{"wk":12,"opp":"DAL","pts":24},{"wk":13,"opp":"ARI","pts":26},{"wk":14,"opp":"IND","pts":26},{"wk":15,"opp":"SEA","pts":22.5},{"wk":16,"opp":"HOU","pts":20},{"wk":17,"opp":"SF","pts":22},{"wk":18,"opp":"NYG","pts":22.3}]},{"abbr":"LAC","name":"Chargers","color":"#0080C6","ppg":23.7,"playoff":74.8,"w15":25,"w16":26.3,"w17":23.5,"games":[{"wk":1,"opp":"ARI","pts":28.5},{"wk":2,"opp":"LV","pts":25.5},{"wk":3,"opp":"BUF","pts":22.8},{"wk":4,"opp":"SEA","pts":21.3},{"wk":5,"opp":"DEN","pts":23.5},{"wk":6,"opp":"KC","pts":22},{"wk":8,"opp":"LAR","pts":22},{"wk":9,"opp":"HOU","pts":23},{"wk":10,"opp":"BAL","pts":22},{"wk":11,"opp":"NYJ","pts":25.5},{"wk":12,"opp":"NE","pts":23.5},{"wk":13,"opp":"TB","pts":24.5},{"wk":14,"opp":"LV","pts":24.5},{"wk":15,"opp":"SF","pts":25},{"wk":16,"opp":"MIA","pts":26.3},{"wk":17,"opp":"KC","pts":23.5},{"wk":18,"opp":"DEN","pts":20}]},{"abbr":"JAX","name":"Jaguars","color":"#006778","ppg":23.5,"playoff":70.6,"w15":20.3,"w16":24.3,"w17":26,"games":[{"wk":1,"opp":"CLE","pts":24},{"wk":2,"opp":"DEN","pts":20.5},{"wk":3,"opp":"NE","pts":23.5},{"wk":4,"opp":"CIN","pts":24.5},{"wk":5,"opp":"PHI","pts":22},{"wk":6,"opp":"HOU","pts":22},{"wk":8,"opp":"IND","pts":27},{"wk":9,"opp":"BAL","pts":22.5},{"wk":10,"opp":"TEN","pts":24},{"wk":11,"opp":"NYG","pts":24},{"wk":12,"opp":"TEN","pts":25.5},{"wk":13,"opp":"CHI","pts":22.3},{"wk":14,"opp":"PIT","pts":23.8},{"wk":15,"opp":"HOU","pts":20.3},{"wk":16,"opp":"DAL","pts":24.3},{"wk":17,"opp":"WAS","pts":26},{"wk":18,"opp":"IND","pts":22.5}]},{"abbr":"WAS","name":"Commanders","color":"#5A1414","ppg":23.5,"playoff":69.5,"w15":25,"w16":22,"w17":22.5,"games":[{"wk":1,"opp":"PHI","pts":21.5},{"wk":2,"opp":"DAL","pts":23.5},{"wk":3,"opp":"SEA","pts":21.5},{"wk":4,"opp":"IND","pts":26},{"wk":5,"opp":"NYG","pts":25.5},{"wk":6,"opp":"SF","pts":22.5},{"wk":8,"opp":"PHI","pts":22.5},{"wk":9,"opp":"LAR","pts":23},{"wk":10,"opp":"NYG","pts":23},{"wk":11,"opp":"CIN","pts":25.5},{"wk":12,"opp":"ARI","pts":26},{"wk":13,"opp":"TEN","pts":24},{"wk":14,"opp":"HOU","pts":21.5},{"wk":15,"opp":"ATL","pts":25},{"wk":16,"opp":"MIN","pts":22},{"wk":17,"opp":"JAX","pts":22.5},{"wk":18,"opp":"DAL","pts":24}]},{"abbr":"IND","name":"Colts","color":"#002C5F","ppg":23.4,"playoff":73,"w15":24.5,"w16":25.5,"w17":23,"games":[{"wk":1,"opp":"BAL","pts":22.5},{"wk":2,"opp":"KC","pts":20.5},{"wk":3,"opp":"HOU","pts":22},{"wk":4,"opp":"WAS","pts":24.5},{"wk":5,"opp":"PIT","pts":22.5},{"wk":6,"opp":"TEN","pts":25.5},{"wk":7,"opp":"MIN","pts":22},{"wk":8,"opp":"JAX","pts":22.5},{"wk":9,"opp":"DAL","pts":25.5},{"wk":10,"opp":"MIA","pts":27},{"wk":11,"opp":"HOU","pts":20},{"wk":12,"opp":"NYG","pts":25},{"wk":14,"opp":"PHI","pts":20.5},{"wk":15,"opp":"TEN","pts":24.5},{"wk":16,"opp":"CIN","pts":25.5},{"wk":17,"opp":"CLE","pts":23},{"wk":18,"opp":"JAX","pts":24}]},{"abbr":"TB","name":"Buccaneers","color":"#D50A0A","ppg":23.3,"playoff":70,"w15":24.5,"w16":23.5,"w17":22,"games":[{"wk":1,"opp":"CIN","pts":24},{"wk":2,"opp":"CLE","pts":24},{"wk":3,"opp":"MIN","pts":23},{"wk":4,"opp":"GB","pts":23},{"wk":5,"opp":"DAL","pts":24.5},{"wk":6,"opp":"PIT","pts":23.5},{"wk":7,"opp":"CAR","pts":23.5},{"wk":8,"opp":"ATL","pts":25.5},{"wk":9,"opp":"CHI","pts":22.5},{"wk":11,"opp":"DET","pts":22.5},{"wk":12,"opp":"CAR","pts":24},{"wk":13,"opp":"LAC","pts":22},{"wk":14,"opp":"BAL","pts":21.3},{"wk":15,"opp":"NO","pts":24.5},{"wk":16,"opp":"ATL","pts":23.5},{"wk":17,"opp":"LAR","pts":22},{"wk":18,"opp":"NO","pts":22.5}]},{"abbr":"HOU","name":"Texans","color":"#03202F","ppg":22.5,"playoff":60.8,"w15":23.3,"w16":17.5,"w17":20,"games":[{"wk":1,"opp":"BUF","pts":21.5},{"wk":2,"opp":"CIN","pts":24.5},{"wk":3,"opp":"IND","pts":23.5},{"wk":4,"opp":"DAL","pts":25},{"wk":5,"opp":"TEN","pts":23.5},{"wk":6,"opp":"JAX","pts":20.5},{"wk":7,"opp":"NYG","pts":24.5},{"wk":9,"opp":"LAC","pts":20.5},{"wk":10,"opp":"CLE","pts":21.5},{"wk":11,"opp":"IND","pts":25.5},{"wk":12,"opp":"BAL","pts":23.5},{"wk":13,"opp":"PIT","pts":21.5},{"wk":14,"opp":"WAS","pts":23},{"wk":15,"opp":"JAX","pts":23.3},{"wk":16,"opp":"PHI","pts":17.5},{"wk":17,"opp":"GB","pts":20},{"wk":18,"opp":"TEN","pts":23.3}]},{"abbr":"MIN","name":"Vikings","color":"#4F2683","ppg":22.4,"playoff":68.5,"w15":22.5,"w16":24.5,"w17":21.5,"games":[{"wk":1,"opp":"GB","pts":22},{"wk":2,"opp":"CHI","pts":21},{"wk":3,"opp":"TB","pts":21.5},{"wk":4,"opp":"MIA","pts":25.5},{"wk":5,"opp":"NO","pts":23},{"wk":7,"opp":"IND","pts":24.5},{"wk":8,"opp":"DET","pts":21.5},{"wk":9,"opp":"BUF","pts":22.8},{"wk":10,"opp":"GB","pts":20.5},{"wk":11,"opp":"SF","pts":21.5},{"wk":12,"opp":"ATL","pts":24},{"wk":13,"opp":"CAR","pts":23},{"wk":14,"opp":"NE","pts":19.5},{"wk":15,"opp":"DET","pts":22.5},{"wk":16,"opp":"WAS","pts":24.5},{"wk":17,"opp":"NYJ","pts":21.5},{"wk":18,"opp":"CHI","pts":22.5}]},{"abbr":"DEN","name":"Broncos","color":"#FB4F14","ppg":22.3,"playoff":65.5,"w15":23,"w16":22.5,"w17":20,"games":[{"wk":1,"opp":"KC","pts":19.8},{"wk":2,"opp":"JAX","pts":23},{"wk":3,"opp":"LAR","pts":21.3},{"wk":4,"opp":"SF","pts":22},{"wk":5,"opp":"LAC","pts":21},{"wk":6,"opp":"SEA","pts":20.5},{"wk":7,"opp":"ARI","pts":25.5},{"wk":8,"opp":"KC","pts":22.5},{"wk":9,"opp":"CAR","pts":22.8},{"wk":11,"opp":"LV","pts":24.5},{"wk":12,"opp":"PIT","pts":20.5},{"wk":13,"opp":"MIA","pts":26},{"wk":14,"opp":"NYJ","pts":22.5},{"wk":15,"opp":"LV","pts":23},{"wk":16,"opp":"BUF","pts":22.5},{"wk":17,"opp":"NE","pts":20},{"wk":18,"opp":"LAC","pts":21.5}]},{"abbr":"NYG","name":"Giants","color":"#0B2265","ppg":22.1,"playoff":67.5,"w15":22.5,"w16":22.5,"w17":22.5,"games":[{"wk":1,"opp":"DAL","pts":23},{"wk":2,"opp":"LAR","pts":20},{"wk":3,"opp":"TEN","pts":23.8},{"wk":4,"opp":"ARI","pts":26.3},{"wk":5,"opp":"WAS","pts":23},{"wk":6,"opp":"NO","pts":23.5},{"wk":7,"opp":"HOU","pts":19},{"wk":9,"opp":"PHI","pts":19.5},{"wk":10,"opp":"WAS","pts":24.5},{"wk":11,"opp":"JAX","pts":22.5},{"wk":12,"opp":"IND","pts":22.5},{"wk":13,"opp":"SF","pts":22.3},{"wk":14,"opp":"SEA","pts":19},{"wk":15,"opp":"CLE","pts":22.5},{"wk":16,"opp":"DET","pts":22.5},{"wk":17,"opp":"DAL","pts":22.5},{"wk":18,"opp":"PHI","pts":19.3}]},{"abbr":"NO","name":"Saints","color":"#D3BC8D","ppg":21.5,"playoff":67.5,"w15":21,"w16":25,"w17":21.5,"games":[{"wk":1,"opp":"DET","pts":21.3},{"wk":2,"opp":"BAL","pts":19.5},{"wk":3,"opp":"LV","pts":23},{"wk":4,"opp":"ATL","pts":24.5},{"wk":5,"opp":"MIN","pts":21.5},{"wk":6,"opp":"NYG","pts":21},{"wk":7,"opp":"PIT","pts":20},{"wk":9,"opp":"CLE","pts":22.5},{"wk":10,"opp":"CAR","pts":22.5},{"wk":11,"opp":"CHI","pts":20},{"wk":12,"opp":"CIN","pts":21},{"wk":13,"opp":"GB","pts":20.5},{"wk":14,"opp":"CAR","pts":20.5},{"wk":15,"opp":"TB","pts":21},{"wk":16,"opp":"ARI","pts":25},{"wk":17,"opp":"ATL","pts":21.5},{"wk":18,"opp":"TB","pts":21}]},{"abbr":"PIT","name":"Steelers","color":"#FFB612","ppg":21.5,"playoff":66.5,"w15":22,"w16":22.5,"w17":22,"games":[{"wk":1,"opp":"ATL","pts":22.8},{"wk":2,"opp":"NE","pts":19.5},{"wk":3,"opp":"CIN","pts":23},{"wk":4,"opp":"CLE","pts":21.5},{"wk":5,"opp":"IND","pts":25},{"wk":6,"opp":"TB","pts":22},{"wk":7,"opp":"NO","pts":22.5},{"wk":8,"opp":"CLE","pts":22.8},{"wk":10,"opp":"CIN","pts":22},{"wk":11,"opp":"PHI","pts":18.5},{"wk":12,"opp":"DEN","pts":19},{"wk":13,"opp":"HOU","pts":20},{"wk":14,"opp":"JAX","pts":20.8},{"wk":15,"opp":"BAL","pts":22},{"wk":16,"opp":"CAR","pts":22.5},{"wk":17,"opp":"TEN","pts":22},{"wk":18,"opp":"BAL","pts":19}]},{"abbr":"ATL","name":"Falcons","color":"#A71930","ppg":21.2,"playoff":66.5,"w15":21.5,"w16":22,"w17":23,"games":[{"wk":1,"opp":"PIT","pts":19.8},{"wk":2,"opp":"CAR","pts":23},{"wk":3,"opp":"GB","pts":19.5},{"wk":4,"opp":"NO","pts":22},{"wk":5,"opp":"BAL","pts":22},{"wk":6,"opp":"CHI","pts":22.3},{"wk":7,"opp":"SF","pts":21.5},{"wk":8,"opp":"TB","pts":21},{"wk":9,"opp":"CIN","pts":22},{"wk":10,"opp":"KC","pts":20.5},{"wk":12,"opp":"MIN","pts":19.5},{"wk":13,"opp":"DET","pts":22.5},{"wk":14,"opp":"CLE","pts":19.5},{"wk":15,"opp":"WAS","pts":21.5},{"wk":16,"opp":"TB","pts":22},{"wk":17,"opp":"NO","pts":23},{"wk":18,"opp":"CAR","pts":19.5}]},{"abbr":"CAR","name":"Panthers","color":"#0085CA","ppg":20.8,"playoff":60,"w15":22.5,"w16":19,"w17":18.5,"games":[{"wk":1,"opp":"CHI","pts":22},{"wk":2,"opp":"ATL","pts":21.5},{"wk":3,"opp":"CLE","pts":20.5},{"wk":4,"opp":"DET","pts":22.3},{"wk":6,"opp":"PHI","pts":18.5},{"wk":7,"opp":"TB","pts":22},{"wk":8,"opp":"GB","pts":19.3},{"wk":9,"opp":"DEN","pts":19.8},{"wk":10,"opp":"NO","pts":21},{"wk":11,"opp":"BAL","pts":21},{"wk":12,"opp":"TB","pts":20.5},{"wk":13,"opp":"MIN","pts":19.5},{"wk":14,"opp":"NO","pts":23},{"wk":15,"opp":"CIN","pts":22.5},{"wk":16,"opp":"PIT","pts":19},{"wk":17,"opp":"SEA","pts":18.5},{"wk":18,"opp":"ATL","pts":22}]},{"abbr":"TEN","name":"Titans","color":"#0C2340","ppg":20.6,"playoff":64,"w15":23,"w16":20.5,"w17":20.5,"games":[{"wk":1,"opp":"NYJ","pts":20.8},{"wk":2,"opp":"PHI","pts":19},{"wk":3,"opp":"NYG","pts":20.8},{"wk":4,"opp":"BAL","pts":19.5},{"wk":5,"opp":"HOU","pts":20},{"wk":6,"opp":"IND","pts":22},{"wk":7,"opp":"CLE","pts":21.5},{"wk":8,"opp":"CIN","pts":21.5},{"wk":10,"opp":"JAX","pts":21.5},{"wk":11,"opp":"DAL","pts":21},{"wk":12,"opp":"JAX","pts":20},{"wk":13,"opp":"WAS","pts":22.5},{"wk":14,"opp":"DET","pts":20},{"wk":15,"opp":"IND","pts":23},{"wk":16,"opp":"LV","pts":20.5},{"wk":17,"opp":"PIT","pts":20.5},{"wk":18,"opp":"HOU","pts":16.3}]},{"abbr":"LV","name":"Raiders","color":"#000000","ppg":19.2,"playoff":62.5,"w15":18.5,"w16":22,"w17":22,"games":[{"wk":1,"opp":"MIA","pts":22},{"wk":2,"opp":"LAC","pts":17},{"wk":3,"opp":"NO","pts":19.5},{"wk":4,"opp":"KC","pts":19},{"wk":5,"opp":"NE","pts":18},{"wk":6,"opp":"BUF","pts":20.5},{"wk":7,"opp":"LAR","pts":19.5},{"wk":8,"opp":"NYJ","pts":19.5},{"wk":9,"opp":"SF","pts":19},{"wk":10,"opp":"SEA","pts":18.3},{"wk":11,"opp":"DEN","pts":17},{"wk":12,"opp":"CLE","pts":19},{"wk":14,"opp":"LAC","pts":19},{"wk":15,"opp":"DEN","pts":18.5},{"wk":16,"opp":"TEN","pts":22},{"wk":17,"opp":"ARI","pts":22},{"wk":18,"opp":"KC","pts":16}]},{"abbr":"MIA","name":"Dolphins","color":"#008E97","ppg":19,"playoff":56.8,"w15":17.5,"w16":19.3,"w17":20,"games":[{"wk":1,"opp":"LV","pts":18.5},{"wk":2,"opp":"SF","pts":18},{"wk":3,"opp":"KC","pts":18.5},{"wk":4,"opp":"MIN","pts":18},{"wk":5,"opp":"CIN","pts":21.8},{"wk":7,"opp":"NYJ","pts":19.5},{"wk":8,"opp":"NE","pts":19.3},{"wk":9,"opp":"DET","pts":20.5},{"wk":10,"opp":"IND","pts":20.5},{"wk":11,"opp":"BUF","pts":18},{"wk":12,"opp":"NYJ","pts":21},{"wk":13,"opp":"DEN","pts":16.5},{"wk":14,"opp":"CHI","pts":20.5},{"wk":15,"opp":"GB","pts":17.5},{"wk":16,"opp":"LAC","pts":19.3},{"wk":17,"opp":"BUF","pts":20},{"wk":18,"opp":"NE","pts":16}]},{"abbr":"CLE","name":"Browns","color":"#311D00","ppg":18.7,"playoff":55.3,"w15":18,"w16":16.8,"w17":20.5,"games":[{"wk":1,"opp":"JAX","pts":16.5},{"wk":2,"opp":"TB","pts":18.5},{"wk":3,"opp":"CAR","pts":19},{"wk":4,"opp":"PIT","pts":19},{"wk":5,"opp":"NYJ","pts":18.5},{"wk":6,"opp":"BAL","pts":19},{"wk":7,"opp":"TEN","pts":19},{"wk":8,"opp":"PIT","pts":16.8},{"wk":9,"opp":"NO","pts":19},{"wk":10,"opp":"HOU","pts":17},{"wk":12,"opp":"LV","pts":20.5},{"wk":13,"opp":"CIN","pts":20.5},{"wk":14,"opp":"ATL","pts":21},{"wk":15,"opp":"NYG","pts":18},{"wk":16,"opp":"BAL","pts":16.8},{"wk":17,"opp":"IND","pts":20.5},{"wk":18,"opp":"CIN","pts":18}]},{"abbr":"NYJ","name":"Jets","color":"#125740","ppg":18.5,"playoff":56.5,"w15":21.5,"w16":17,"w17":18,"games":[{"wk":1,"opp":"TEN","pts":17.8},{"wk":2,"opp":"GB","pts":18.5},{"wk":3,"opp":"DET","pts":18},{"wk":4,"opp":"CHI","pts":18.5},{"wk":5,"opp":"CLE","pts":21},{"wk":6,"opp":"NE","pts":16.5},{"wk":7,"opp":"MIA","pts":22},{"wk":8,"opp":"LV","pts":21},{"wk":9,"opp":"KC","pts":16},{"wk":10,"opp":"BUF","pts":19.8},{"wk":11,"opp":"LAC","pts":16},{"wk":12,"opp":"MIA","pts":19.5},{"wk":14,"opp":"DEN","pts":17},{"wk":15,"opp":"ARI","pts":21.5},{"wk":16,"opp":"NE","pts":17},{"wk":17,"opp":"MIN","pts":18},{"wk":18,"opp":"BUF","pts":16.8}]},{"abbr":"ARI","name":"Cardinals","color":"#97233F","ppg":18.4,"playoff":60,"w15":20,"w16":19.5,"w17":20.5,"games":[{"wk":1,"opp":"LAC","pts":18},{"wk":2,"opp":"SEA","pts":17.3},{"wk":3,"opp":"SF","pts":17.5},{"wk":4,"opp":"NYG","pts":19.3},{"wk":5,"opp":"DET","pts":20},{"wk":6,"opp":"LAR","pts":17},{"wk":7,"opp":"DEN","pts":18},{"wk":8,"opp":"DAL","pts":18.5},{"wk":9,"opp":"SEA","pts":16},{"wk":10,"opp":"LAR","pts":18.5},{"wk":11,"opp":"KC","pts":16.5},{"wk":12,"opp":"WAS","pts":21.5},{"wk":13,"opp":"PHI","pts":17.5},{"wk":15,"opp":"NYJ","pts":20},{"wk":16,"opp":"NO","pts":19.5},{"wk":17,"opp":"LV","pts":20.5},{"wk":18,"opp":"SF","pts":18}]}]};
+  var DATA = {"updated":"8/11 Tue","season":2026,"source":"mixed","phase":"preseason","display_week":null,"week":null,"pinned":null,"teams":[{"abbr":"LAR","name":"Rams","color":"#003594","ppg":26.7,"ppg_rest":26.7,"games_left":17,"playoff":78.8,"w15":29.3,"w16":23,"w17":26.5,"games":[{"wk":1,"opp":"SF","pts":26},{"wk":2,"opp":"NYG","pts":28.5},{"wk":3,"opp":"DEN","pts":24.3},{"wk":4,"opp":"PHI","pts":24.5},{"wk":5,"opp":"BUF","pts":28.3},{"wk":6,"opp":"ARI","pts":30.5},{"wk":7,"opp":"LV","pts":27},{"wk":8,"opp":"LAC","pts":26},{"wk":9,"opp":"WAS","pts":28},{"wk":10,"opp":"ARI","pts":29},{"wk":12,"opp":"GB","pts":26.5},{"wk":13,"opp":"KC","pts":26},{"wk":14,"opp":"SF","pts":26},{"wk":15,"opp":"DAL","pts":29.3},{"wk":16,"opp":"SEA","pts":23},{"wk":17,"opp":"TB","pts":26.5},{"wk":18,"opp":"SEA","pts":23.8}]},{"abbr":"BUF","name":"Bills","color":"#00338D","ppg":26.1,"ppg_rest":26.1,"games_left":17,"playoff":79,"w15":27.5,"w16":24,"w17":27.5,"games":[{"wk":1,"opp":"HOU","pts":23},{"wk":2,"opp":"DET","pts":27.8},{"wk":3,"opp":"LAC","pts":25.8},{"wk":4,"opp":"NE","pts":26.3},{"wk":5,"opp":"LAR","pts":25.3},{"wk":6,"opp":"LV","pts":27},{"wk":8,"opp":"BAL","pts":27},{"wk":9,"opp":"MIN","pts":25.8},{"wk":10,"opp":"NYJ","pts":26.8},{"wk":11,"opp":"MIA","pts":29.5},{"wk":12,"opp":"KC","pts":26.5},{"wk":13,"opp":"NE","pts":23.5},{"wk":14,"opp":"GB","pts":24},{"wk":15,"opp":"CHI","pts":27.5},{"wk":16,"opp":"DEN","pts":24},{"wk":17,"opp":"MIA","pts":27.5},{"wk":18,"opp":"NYJ","pts":26.8}]},{"abbr":"DET","name":"Lions","color":"#0076B6","ppg":26.1,"ppg_rest":26.1,"games_left":17,"playoff":75,"w15":24,"w16":27,"w17":24,"games":[{"wk":1,"opp":"NO","pts":27.8},{"wk":2,"opp":"BUF","pts":24.8},{"wk":3,"opp":"NYJ","pts":27.5},{"wk":4,"opp":"CAR","pts":25.3},{"wk":5,"opp":"ARI","pts":28.5},{"wk":7,"opp":"GB","pts":26.5},{"wk":8,"opp":"MIN","pts":26},{"wk":9,"opp":"MIA","pts":27},{"wk":10,"opp":"NE","pts":25},{"wk":11,"opp":"TB","pts":27},{"wk":12,"opp":"CHI","pts":27.5},{"wk":13,"opp":"ATL","pts":26},{"wk":14,"opp":"TEN","pts":27.5},{"wk":15,"opp":"MIN","pts":24},{"wk":16,"opp":"NYG","pts":27},{"wk":17,"opp":"CHI","pts":24},{"wk":18,"opp":"GB","pts":22.5}]},{"abbr":"CIN","name":"Bengals","color":"#FB4F14","ppg":26,"ppg_rest":26,"games_left":17,"playoff":79,"w15":25,"w16":27,"w17":27,"games":[{"wk":1,"opp":"TB","pts":27.5},{"wk":2,"opp":"HOU","pts":22},{"wk":3,"opp":"PIT","pts":24.5},{"wk":4,"opp":"JAX","pts":27},{"wk":5,"opp":"MIA","pts":27.8},{"wk":7,"opp":"BAL","pts":24},{"wk":8,"opp":"TEN","pts":28},{"wk":9,"opp":"ATL","pts":27.5},{"wk":10,"opp":"PIT","pts":25.5},{"wk":11,"opp":"WAS","pts":27},{"wk":12,"opp":"NO","pts":27.5},{"wk":13,"opp":"CLE","pts":25},{"wk":14,"opp":"KC","pts":25},{"wk":15,"opp":"CAR","pts":25},{"wk":16,"opp":"IND","pts":27},{"wk":17,"opp":"BAL","pts":27},{"wk":18,"opp":"CLE","pts":25.5}]},{"abbr":"BAL","name":"Ravens","color":"#241773","ppg":25.9,"ppg_rest":25.9,"games_left":17,"playoff":75.8,"w15":24.5,"w16":26.8,"w17":24.5,"games":[{"wk":1,"opp":"IND","pts":26},{"wk":2,"opp":"NO","pts":27},{"wk":3,"opp":"DAL","pts":27},{"wk":4,"opp":"TEN","pts":28},{"wk":5,"opp":"ATL","pts":26.5},{"wk":6,"opp":"CLE","pts":25.5},{"wk":7,"opp":"CIN","pts":27.5},{"wk":8,"opp":"BUF","pts":24.5},{"wk":9,"opp":"JAX","pts":27},{"wk":10,"opp":"LAC","pts":25.5},{"wk":11,"opp":"CAR","pts":25.5},{"wk":12,"opp":"HOU","pts":22},{"wk":14,"opp":"TB","pts":27.3},{"wk":15,"opp":"PIT","pts":24.5},{"wk":16,"opp":"CLE","pts":26.8},{"wk":17,"opp":"CIN","pts":24.5},{"wk":18,"opp":"PIT","pts":24.5}]},{"abbr":"DAL","name":"Cowboys","color":"#041E42","ppg":25.7,"ppg_rest":25.7,"games_left":17,"playoff":77.6,"w15":23.3,"w16":27.3,"w17":27,"games":[{"wk":1,"opp":"NYG","pts":25.5},{"wk":2,"opp":"WAS","pts":28},{"wk":3,"opp":"BAL","pts":24.5},{"wk":4,"opp":"HOU","pts":22.5},{"wk":5,"opp":"TB","pts":28},{"wk":6,"opp":"GB","pts":24.3},{"wk":7,"opp":"PHI","pts":22.8},{"wk":8,"opp":"ARI","pts":29},{"wk":9,"opp":"IND","pts":27},{"wk":10,"opp":"SF","pts":27},{"wk":11,"opp":"TEN","pts":27.5},{"wk":12,"opp":"PHI","pts":25.5},{"wk":13,"opp":"SEA","pts":22},{"wk":15,"opp":"LAR","pts":23.3},{"wk":16,"opp":"JAX","pts":27.3},{"wk":17,"opp":"NYG","pts":27},{"wk":18,"opp":"WAS","pts":25.5}]},{"abbr":"SF","name":"49ers","color":"#AA0000","ppg":25,"ppg_rest":25,"games_left":17,"playoff":67.8,"w15":22.5,"w16":21.8,"w17":23.5,"games":[{"wk":1,"opp":"LAR","pts":22.5},{"wk":2,"opp":"MIA","pts":28.5},{"wk":3,"opp":"ARI","pts":29},{"wk":4,"opp":"DEN","pts":24.5},{"wk":5,"opp":"SEA","pts":22.5},{"wk":6,"opp":"WAS","pts":28},{"wk":7,"opp":"ATL","pts":26},{"wk":9,"opp":"LV","pts":27.5},{"wk":10,"opp":"DAL","pts":25.5},{"wk":11,"opp":"MIN","pts":25},{"wk":12,"opp":"SEA","pts":22.5},{"wk":13,"opp":"NYG","pts":25.3},{"wk":14,"opp":"LAR","pts":23.5},{"wk":15,"opp":"LAC","pts":22.5},{"wk":16,"opp":"KC","pts":21.8},{"wk":17,"opp":"PHI","pts":23.5},{"wk":18,"opp":"ARI","pts":26.5}]},{"abbr":"GB","name":"Packers","color":"#203731","ppg":24.8,"ppg_rest":24.8,"games_left":17,"playoff":73.5,"w15":28,"w16":23,"w17":22.5,"games":[{"wk":1,"opp":"MIN","pts":23.5},{"wk":2,"opp":"NYJ","pts":24},{"wk":3,"opp":"ATL","pts":27},{"wk":4,"opp":"TB","pts":24.5},{"wk":5,"opp":"CHI","pts":26.3},{"wk":6,"opp":"DAL","pts":27.3},{"wk":7,"opp":"DET","pts":24},{"wk":8,"opp":"CAR","pts":26.3},{"wk":9,"opp":"NE","pts":22.5},{"wk":10,"opp":"MIN","pts":25},{"wk":12,"opp":"LAR","pts":22},{"wk":13,"opp":"NO","pts":25},{"wk":14,"opp":"BUF","pts":25.5},{"wk":15,"opp":"MIA","pts":28},{"wk":16,"opp":"CHI","pts":23},{"wk":17,"opp":"HOU","pts":22.5},{"wk":18,"opp":"DET","pts":25}]},{"abbr":"SEA","name":"Seahawks","color":"#69BE28","ppg":24.8,"ppg_rest":24.8,"games_left":17,"playoff":69.5,"w15":21,"w16":24.5,"w17":24,"games":[{"wk":1,"opp":"NE","pts":24},{"wk":2,"opp":"ARI","pts":27.3},{"wk":3,"opp":"WAS","pts":25},{"wk":4,"opp":"LAC","pts":24.3},{"wk":5,"opp":"SF","pts":26},{"wk":6,"opp":"DEN","pts":23},{"wk":7,"opp":"KC","pts":24.3},{"wk":8,"opp":"CHI","pts":26},{"wk":9,"opp":"ARI","pts":29.5},{"wk":10,"opp":"LV","pts":25.3},{"wk":12,"opp":"SF","pts":24},{"wk":13,"opp":"DAL","pts":26.5},{"wk":14,"opp":"NYG","pts":26.5},{"wk":15,"opp":"PHI","pts":21},{"wk":16,"opp":"LAR","pts":24.5},{"wk":17,"opp":"CAR","pts":24},{"wk":18,"opp":"LAR","pts":20.8}]},{"abbr":"CHI","name":"Bears","color":"#0B162A","ppg":24.6,"ppg_rest":24.6,"games_left":17,"playoff":74,"w15":24,"w16":24.5,"w17":25.5,"games":[{"wk":1,"opp":"CAR","pts":24.5},{"wk":2,"opp":"MIN","pts":24.5},{"wk":3,"opp":"PHI","pts":24},{"wk":4,"opp":"NYJ","pts":27},{"wk":5,"opp":"GB","pts":23.3},{"wk":6,"opp":"ATL","pts":25.3},{"wk":7,"opp":"NE","pts":24.5},{"wk":8,"opp":"SEA","pts":21.5},{"wk":9,"opp":"TB","pts":26},{"wk":11,"opp":"NO","pts":26.5},{"wk":12,"opp":"DET","pts":25},{"wk":13,"opp":"JAX","pts":25.3},{"wk":14,"opp":"MIA","pts":26},{"wk":15,"opp":"BUF","pts":24},{"wk":16,"opp":"GB","pts":24.5},{"wk":17,"opp":"DET","pts":25.5},{"wk":18,"opp":"MIN","pts":21}]},{"abbr":"KC","name":"Chiefs","color":"#E31837","ppg":24.1,"ppg_rest":24.1,"games_left":17,"playoff":70.8,"w15":24,"w16":24.8,"w17":22,"games":[{"wk":1,"opp":"DEN","pts":22.8},{"wk":2,"opp":"IND","pts":27},{"wk":3,"opp":"MIA","pts":26},{"wk":4,"opp":"LV","pts":24.5},{"wk":6,"opp":"LAC","pts":24.5},{"wk":7,"opp":"SEA","pts":21.3},{"wk":8,"opp":"DEN","pts":21},{"wk":9,"opp":"NYJ","pts":25.5},{"wk":10,"opp":"ATL","pts":25},{"wk":11,"opp":"ARI","pts":28},{"wk":12,"opp":"BUF","pts":24},{"wk":13,"opp":"LAR","pts":21.5},{"wk":14,"opp":"CIN","pts":23.5},{"wk":15,"opp":"NE","pts":24},{"wk":16,"opp":"SF","pts":24.8},{"wk":17,"opp":"LAC","pts":22},{"wk":18,"opp":"LV","pts":24.5}]},{"abbr":"LAC","name":"Chargers","color":"#0080C6","ppg":23.8,"ppg_rest":23.8,"games_left":17,"playoff":74.8,"w15":25,"w16":26.3,"w17":23.5,"games":[{"wk":1,"opp":"ARI","pts":28.5},{"wk":2,"opp":"LV","pts":25.5},{"wk":3,"opp":"BUF","pts":22.8},{"wk":4,"opp":"SEA","pts":21.3},{"wk":5,"opp":"DEN","pts":23.5},{"wk":6,"opp":"KC","pts":22},{"wk":8,"opp":"LAR","pts":22.5},{"wk":9,"opp":"HOU","pts":23},{"wk":10,"opp":"BAL","pts":22},{"wk":11,"opp":"NYJ","pts":25.5},{"wk":12,"opp":"NE","pts":23.5},{"wk":13,"opp":"TB","pts":24.5},{"wk":14,"opp":"LV","pts":24.5},{"wk":15,"opp":"SF","pts":25},{"wk":16,"opp":"MIA","pts":26.3},{"wk":17,"opp":"KC","pts":23.5},{"wk":18,"opp":"DEN","pts":20}]},{"abbr":"NE","name":"Patriots","color":"#002244","ppg":23.8,"ppg_rest":23.8,"games_left":17,"playoff":67.5,"w15":21.5,"w16":23.5,"w17":22.5,"games":[{"wk":1,"opp":"SEA","pts":20.5},{"wk":2,"opp":"PIT","pts":24},{"wk":3,"opp":"JAX","pts":22},{"wk":4,"opp":"BUF","pts":23.3},{"wk":5,"opp":"LV","pts":26.5},{"wk":6,"opp":"NYJ","pts":26},{"wk":7,"opp":"CHI","pts":23},{"wk":8,"opp":"MIA","pts":26.3},{"wk":9,"opp":"GB","pts":24},{"wk":10,"opp":"DET","pts":23.5},{"wk":12,"opp":"LAC","pts":22},{"wk":13,"opp":"BUF","pts":25},{"wk":14,"opp":"MIN","pts":24},{"wk":15,"opp":"KC","pts":21.5},{"wk":16,"opp":"NYJ","pts":23.5},{"wk":17,"opp":"DEN","pts":22.5},{"wk":18,"opp":"MIA","pts":26.5}]},{"abbr":"PHI","name":"Eagles","color":"#004C54","ppg":23.8,"ppg_rest":23.8,"games_left":17,"playoff":64.5,"w15":22.5,"w16":20,"w17":22,"games":[{"wk":1,"opp":"WAS","pts":26},{"wk":2,"opp":"TEN","pts":23.5},{"wk":3,"opp":"CHI","pts":22.5},{"wk":4,"opp":"LAR","pts":23},{"wk":5,"opp":"JAX","pts":23.5},{"wk":6,"opp":"CAR","pts":25},{"wk":7,"opp":"DAL","pts":25.8},{"wk":8,"opp":"WAS","pts":24},{"wk":9,"opp":"NYG","pts":25},{"wk":11,"opp":"PIT","pts":24},{"wk":12,"opp":"DAL","pts":24},{"wk":13,"opp":"ARI","pts":26},{"wk":14,"opp":"IND","pts":26},{"wk":15,"opp":"SEA","pts":22.5},{"wk":16,"opp":"HOU","pts":20},{"wk":17,"opp":"SF","pts":22},{"wk":18,"opp":"NYG","pts":22.3}]},{"abbr":"JAX","name":"Jaguars","color":"#006778","ppg":23.5,"ppg_rest":23.5,"games_left":17,"playoff":70.6,"w15":20.3,"w16":24.3,"w17":26,"games":[{"wk":1,"opp":"CLE","pts":24},{"wk":2,"opp":"DEN","pts":20.5},{"wk":3,"opp":"NE","pts":23.5},{"wk":4,"opp":"CIN","pts":24.5},{"wk":5,"opp":"PHI","pts":22},{"wk":6,"opp":"HOU","pts":22},{"wk":8,"opp":"IND","pts":27},{"wk":9,"opp":"BAL","pts":22.5},{"wk":10,"opp":"TEN","pts":24},{"wk":11,"opp":"NYG","pts":24},{"wk":12,"opp":"TEN","pts":25.5},{"wk":13,"opp":"CHI","pts":22.3},{"wk":14,"opp":"PIT","pts":23.8},{"wk":15,"opp":"HOU","pts":20.3},{"wk":16,"opp":"DAL","pts":24.3},{"wk":17,"opp":"WAS","pts":26},{"wk":18,"opp":"IND","pts":22.5}]},{"abbr":"WAS","name":"Commanders","color":"#5A1414","ppg":23.5,"ppg_rest":23.5,"games_left":17,"playoff":69.5,"w15":25,"w16":22,"w17":22.5,"games":[{"wk":1,"opp":"PHI","pts":21.5},{"wk":2,"opp":"DAL","pts":23.5},{"wk":3,"opp":"SEA","pts":21.5},{"wk":4,"opp":"IND","pts":26},{"wk":5,"opp":"NYG","pts":25.5},{"wk":6,"opp":"SF","pts":22.5},{"wk":8,"opp":"PHI","pts":22.5},{"wk":9,"opp":"LAR","pts":22.5},{"wk":10,"opp":"NYG","pts":23},{"wk":11,"opp":"CIN","pts":25.5},{"wk":12,"opp":"ARI","pts":26},{"wk":13,"opp":"TEN","pts":24},{"wk":14,"opp":"HOU","pts":21.5},{"wk":15,"opp":"ATL","pts":25},{"wk":16,"opp":"MIN","pts":22},{"wk":17,"opp":"JAX","pts":22.5},{"wk":18,"opp":"DAL","pts":24}]},{"abbr":"IND","name":"Colts","color":"#002C5F","ppg":23.4,"ppg_rest":23.4,"games_left":17,"playoff":73,"w15":24.5,"w16":25.5,"w17":23,"games":[{"wk":1,"opp":"BAL","pts":22.5},{"wk":2,"opp":"KC","pts":20.5},{"wk":3,"opp":"HOU","pts":22},{"wk":4,"opp":"WAS","pts":24.5},{"wk":5,"opp":"PIT","pts":22.5},{"wk":6,"opp":"TEN","pts":25.5},{"wk":7,"opp":"MIN","pts":22},{"wk":8,"opp":"JAX","pts":22.5},{"wk":9,"opp":"DAL","pts":25.5},{"wk":10,"opp":"MIA","pts":27},{"wk":11,"opp":"HOU","pts":20},{"wk":12,"opp":"NYG","pts":25},{"wk":14,"opp":"PHI","pts":20.5},{"wk":15,"opp":"TEN","pts":24.5},{"wk":16,"opp":"CIN","pts":25.5},{"wk":17,"opp":"CLE","pts":23},{"wk":18,"opp":"JAX","pts":24}]},{"abbr":"TB","name":"Buccaneers","color":"#D50A0A","ppg":23.3,"ppg_rest":23.3,"games_left":17,"playoff":70,"w15":24.5,"w16":23.5,"w17":22,"games":[{"wk":1,"opp":"CIN","pts":24},{"wk":2,"opp":"CLE","pts":24},{"wk":3,"opp":"MIN","pts":23},{"wk":4,"opp":"GB","pts":23},{"wk":5,"opp":"DAL","pts":24.5},{"wk":6,"opp":"PIT","pts":23.5},{"wk":7,"opp":"CAR","pts":23.5},{"wk":8,"opp":"ATL","pts":25.5},{"wk":9,"opp":"CHI","pts":22.5},{"wk":11,"opp":"DET","pts":22.5},{"wk":12,"opp":"CAR","pts":24},{"wk":13,"opp":"LAC","pts":22},{"wk":14,"opp":"BAL","pts":21.3},{"wk":15,"opp":"NO","pts":24.5},{"wk":16,"opp":"ATL","pts":23.5},{"wk":17,"opp":"LAR","pts":22},{"wk":18,"opp":"NO","pts":22.5}]},{"abbr":"HOU","name":"Texans","color":"#03202F","ppg":22.5,"ppg_rest":22.5,"games_left":17,"playoff":60.8,"w15":23.3,"w16":17.5,"w17":20,"games":[{"wk":1,"opp":"BUF","pts":21.5},{"wk":2,"opp":"CIN","pts":24.5},{"wk":3,"opp":"IND","pts":23.5},{"wk":4,"opp":"DAL","pts":25},{"wk":5,"opp":"TEN","pts":23.5},{"wk":6,"opp":"JAX","pts":20.5},{"wk":7,"opp":"NYG","pts":24.5},{"wk":9,"opp":"LAC","pts":20.5},{"wk":10,"opp":"CLE","pts":21.5},{"wk":11,"opp":"IND","pts":25.5},{"wk":12,"opp":"BAL","pts":23.5},{"wk":13,"opp":"PIT","pts":21.5},{"wk":14,"opp":"WAS","pts":23},{"wk":15,"opp":"JAX","pts":23.3},{"wk":16,"opp":"PHI","pts":17.5},{"wk":17,"opp":"GB","pts":20},{"wk":18,"opp":"TEN","pts":23.3}]},{"abbr":"MIN","name":"Vikings","color":"#4F2683","ppg":22.4,"ppg_rest":22.4,"games_left":17,"playoff":68.5,"w15":22.5,"w16":24.5,"w17":21.5,"games":[{"wk":1,"opp":"GB","pts":22},{"wk":2,"opp":"CHI","pts":21},{"wk":3,"opp":"TB","pts":21.5},{"wk":4,"opp":"MIA","pts":25.5},{"wk":5,"opp":"NO","pts":23},{"wk":7,"opp":"IND","pts":24.5},{"wk":8,"opp":"DET","pts":21.5},{"wk":9,"opp":"BUF","pts":22.8},{"wk":10,"opp":"GB","pts":20.5},{"wk":11,"opp":"SF","pts":21.5},{"wk":12,"opp":"ATL","pts":24},{"wk":13,"opp":"CAR","pts":23},{"wk":14,"opp":"NE","pts":19.5},{"wk":15,"opp":"DET","pts":22.5},{"wk":16,"opp":"WAS","pts":24.5},{"wk":17,"opp":"NYJ","pts":21.5},{"wk":18,"opp":"CHI","pts":22.5}]},{"abbr":"DEN","name":"Broncos","color":"#FB4F14","ppg":22.3,"ppg_rest":22.3,"games_left":17,"playoff":65.5,"w15":23,"w16":22.5,"w17":20,"games":[{"wk":1,"opp":"KC","pts":19.8},{"wk":2,"opp":"JAX","pts":23},{"wk":3,"opp":"LAR","pts":21.3},{"wk":4,"opp":"SF","pts":22},{"wk":5,"opp":"LAC","pts":21},{"wk":6,"opp":"SEA","pts":20.5},{"wk":7,"opp":"ARI","pts":25.5},{"wk":8,"opp":"KC","pts":22.5},{"wk":9,"opp":"CAR","pts":22.8},{"wk":11,"opp":"LV","pts":24.5},{"wk":12,"opp":"PIT","pts":20.5},{"wk":13,"opp":"MIA","pts":26},{"wk":14,"opp":"NYJ","pts":22.5},{"wk":15,"opp":"LV","pts":23},{"wk":16,"opp":"BUF","pts":22.5},{"wk":17,"opp":"NE","pts":20},{"wk":18,"opp":"LAC","pts":21.5}]},{"abbr":"NYG","name":"Giants","color":"#0B2265","ppg":22.1,"ppg_rest":22.1,"games_left":17,"playoff":67.5,"w15":22.5,"w16":22.5,"w17":22.5,"games":[{"wk":1,"opp":"DAL","pts":23},{"wk":2,"opp":"LAR","pts":20},{"wk":3,"opp":"TEN","pts":23.8},{"wk":4,"opp":"ARI","pts":26.3},{"wk":5,"opp":"WAS","pts":23},{"wk":6,"opp":"NO","pts":23.5},{"wk":7,"opp":"HOU","pts":19},{"wk":9,"opp":"PHI","pts":19.5},{"wk":10,"opp":"WAS","pts":24.5},{"wk":11,"opp":"JAX","pts":22.5},{"wk":12,"opp":"IND","pts":22.5},{"wk":13,"opp":"SF","pts":22.3},{"wk":14,"opp":"SEA","pts":19},{"wk":15,"opp":"CLE","pts":22.5},{"wk":16,"opp":"DET","pts":22.5},{"wk":17,"opp":"DAL","pts":22.5},{"wk":18,"opp":"PHI","pts":19.3}]},{"abbr":"NO","name":"Saints","color":"#D3BC8D","ppg":21.5,"ppg_rest":21.5,"games_left":17,"playoff":67.5,"w15":21,"w16":25,"w17":21.5,"games":[{"wk":1,"opp":"DET","pts":20.8},{"wk":2,"opp":"BAL","pts":19.5},{"wk":3,"opp":"LV","pts":23},{"wk":4,"opp":"ATL","pts":24},{"wk":5,"opp":"MIN","pts":21.5},{"wk":6,"opp":"NYG","pts":21},{"wk":7,"opp":"PIT","pts":20},{"wk":9,"opp":"CLE","pts":22.5},{"wk":10,"opp":"CAR","pts":22.5},{"wk":11,"opp":"CHI","pts":20},{"wk":12,"opp":"CIN","pts":21},{"wk":13,"opp":"GB","pts":20.5},{"wk":14,"opp":"CAR","pts":20.5},{"wk":15,"opp":"TB","pts":21},{"wk":16,"opp":"ARI","pts":25},{"wk":17,"opp":"ATL","pts":21.5},{"wk":18,"opp":"TB","pts":21}]},{"abbr":"PIT","name":"Steelers","color":"#FFB612","ppg":21.4,"ppg_rest":21.4,"games_left":17,"playoff":66.5,"w15":22,"w16":22.5,"w17":22,"games":[{"wk":1,"opp":"ATL","pts":22.3},{"wk":2,"opp":"NE","pts":19.5},{"wk":3,"opp":"CIN","pts":23},{"wk":4,"opp":"CLE","pts":21.5},{"wk":5,"opp":"IND","pts":25},{"wk":6,"opp":"TB","pts":22},{"wk":7,"opp":"NO","pts":22.5},{"wk":8,"opp":"CLE","pts":22.8},{"wk":10,"opp":"CIN","pts":22},{"wk":11,"opp":"PHI","pts":18.5},{"wk":12,"opp":"DEN","pts":19},{"wk":13,"opp":"HOU","pts":20},{"wk":14,"opp":"JAX","pts":20.8},{"wk":15,"opp":"BAL","pts":22},{"wk":16,"opp":"CAR","pts":22.5},{"wk":17,"opp":"TEN","pts":22},{"wk":18,"opp":"BAL","pts":19}]},{"abbr":"ATL","name":"Falcons","color":"#A71930","ppg":21.2,"ppg_rest":21.2,"games_left":17,"playoff":66.5,"w15":21.5,"w16":22,"w17":23,"games":[{"wk":1,"opp":"PIT","pts":19.3},{"wk":2,"opp":"CAR","pts":23},{"wk":3,"opp":"GB","pts":19.5},{"wk":4,"opp":"NO","pts":21.5},{"wk":5,"opp":"BAL","pts":22},{"wk":6,"opp":"CHI","pts":22.3},{"wk":7,"opp":"SF","pts":21.5},{"wk":8,"opp":"TB","pts":21},{"wk":9,"opp":"CIN","pts":22},{"wk":10,"opp":"KC","pts":20.5},{"wk":12,"opp":"MIN","pts":19.5},{"wk":13,"opp":"DET","pts":22.5},{"wk":14,"opp":"CLE","pts":19.5},{"wk":15,"opp":"WAS","pts":21.5},{"wk":16,"opp":"TB","pts":22},{"wk":17,"opp":"NO","pts":23},{"wk":18,"opp":"CAR","pts":19.5}]},{"abbr":"CAR","name":"Panthers","color":"#0085CA","ppg":20.8,"ppg_rest":20.8,"games_left":17,"playoff":60,"w15":22.5,"w16":19,"w17":18.5,"games":[{"wk":1,"opp":"CHI","pts":22},{"wk":2,"opp":"ATL","pts":21.5},{"wk":3,"opp":"CLE","pts":20.5},{"wk":4,"opp":"DET","pts":22.3},{"wk":6,"opp":"PHI","pts":18.5},{"wk":7,"opp":"TB","pts":22},{"wk":8,"opp":"GB","pts":19.3},{"wk":9,"opp":"DEN","pts":19.8},{"wk":10,"opp":"NO","pts":21},{"wk":11,"opp":"BAL","pts":21},{"wk":12,"opp":"TB","pts":20.5},{"wk":13,"opp":"MIN","pts":19.5},{"wk":14,"opp":"NO","pts":23},{"wk":15,"opp":"CIN","pts":22.5},{"wk":16,"opp":"PIT","pts":19},{"wk":17,"opp":"SEA","pts":18.5},{"wk":18,"opp":"ATL","pts":22}]},{"abbr":"TEN","name":"Titans","color":"#0C2340","ppg":20.6,"ppg_rest":20.6,"games_left":17,"playoff":64,"w15":23,"w16":20.5,"w17":20.5,"games":[{"wk":1,"opp":"NYJ","pts":20.8},{"wk":2,"opp":"PHI","pts":19},{"wk":3,"opp":"NYG","pts":20.8},{"wk":4,"opp":"BAL","pts":19.5},{"wk":5,"opp":"HOU","pts":20},{"wk":6,"opp":"IND","pts":22},{"wk":7,"opp":"CLE","pts":21.5},{"wk":8,"opp":"CIN","pts":21.5},{"wk":10,"opp":"JAX","pts":21.5},{"wk":11,"opp":"DAL","pts":21},{"wk":12,"opp":"JAX","pts":20},{"wk":13,"opp":"WAS","pts":22.5},{"wk":14,"opp":"DET","pts":20},{"wk":15,"opp":"IND","pts":23},{"wk":16,"opp":"LV","pts":20.5},{"wk":17,"opp":"PIT","pts":20.5},{"wk":18,"opp":"HOU","pts":16.3}]},{"abbr":"LV","name":"Raiders","color":"#000000","ppg":19.2,"ppg_rest":19.2,"games_left":17,"playoff":62.5,"w15":18.5,"w16":22,"w17":22,"games":[{"wk":1,"opp":"MIA","pts":22},{"wk":2,"opp":"LAC","pts":17},{"wk":3,"opp":"NO","pts":19.5},{"wk":4,"opp":"KC","pts":19},{"wk":5,"opp":"NE","pts":18},{"wk":6,"opp":"BUF","pts":20.5},{"wk":7,"opp":"LAR","pts":19.5},{"wk":8,"opp":"NYJ","pts":19.5},{"wk":9,"opp":"SF","pts":19},{"wk":10,"opp":"SEA","pts":18.3},{"wk":11,"opp":"DEN","pts":17},{"wk":12,"opp":"CLE","pts":19},{"wk":14,"opp":"LAC","pts":19},{"wk":15,"opp":"DEN","pts":18.5},{"wk":16,"opp":"TEN","pts":22},{"wk":17,"opp":"ARI","pts":22},{"wk":18,"opp":"KC","pts":16}]},{"abbr":"MIA","name":"Dolphins","color":"#008E97","ppg":19,"ppg_rest":19,"games_left":17,"playoff":56.8,"w15":17.5,"w16":19.3,"w17":20,"games":[{"wk":1,"opp":"LV","pts":18.5},{"wk":2,"opp":"SF","pts":18},{"wk":3,"opp":"KC","pts":18.5},{"wk":4,"opp":"MIN","pts":18},{"wk":5,"opp":"CIN","pts":21.8},{"wk":7,"opp":"NYJ","pts":19.5},{"wk":8,"opp":"NE","pts":19.3},{"wk":9,"opp":"DET","pts":20.5},{"wk":10,"opp":"IND","pts":20.5},{"wk":11,"opp":"BUF","pts":18},{"wk":12,"opp":"NYJ","pts":21},{"wk":13,"opp":"DEN","pts":16.5},{"wk":14,"opp":"CHI","pts":20.5},{"wk":15,"opp":"GB","pts":17.5},{"wk":16,"opp":"LAC","pts":19.3},{"wk":17,"opp":"BUF","pts":20},{"wk":18,"opp":"NE","pts":16}]},{"abbr":"CLE","name":"Browns","color":"#311D00","ppg":18.7,"ppg_rest":18.7,"games_left":17,"playoff":55.3,"w15":18,"w16":16.8,"w17":20.5,"games":[{"wk":1,"opp":"JAX","pts":16.5},{"wk":2,"opp":"TB","pts":18.5},{"wk":3,"opp":"CAR","pts":19},{"wk":4,"opp":"PIT","pts":19},{"wk":5,"opp":"NYJ","pts":18.5},{"wk":6,"opp":"BAL","pts":19},{"wk":7,"opp":"TEN","pts":19},{"wk":8,"opp":"PIT","pts":16.8},{"wk":9,"opp":"NO","pts":19},{"wk":10,"opp":"HOU","pts":17},{"wk":12,"opp":"LV","pts":20.5},{"wk":13,"opp":"CIN","pts":20.5},{"wk":14,"opp":"ATL","pts":21},{"wk":15,"opp":"NYG","pts":18},{"wk":16,"opp":"BAL","pts":16.8},{"wk":17,"opp":"IND","pts":20.5},{"wk":18,"opp":"CIN","pts":18}]},{"abbr":"NYJ","name":"Jets","color":"#125740","ppg":18.5,"ppg_rest":18.5,"games_left":17,"playoff":56.5,"w15":21.5,"w16":17,"w17":18,"games":[{"wk":1,"opp":"TEN","pts":17.8},{"wk":2,"opp":"GB","pts":18.5},{"wk":3,"opp":"DET","pts":18},{"wk":4,"opp":"CHI","pts":18.5},{"wk":5,"opp":"CLE","pts":21},{"wk":6,"opp":"NE","pts":16.5},{"wk":7,"opp":"MIA","pts":22},{"wk":8,"opp":"LV","pts":21},{"wk":9,"opp":"KC","pts":16},{"wk":10,"opp":"BUF","pts":19.8},{"wk":11,"opp":"LAC","pts":16},{"wk":12,"opp":"MIA","pts":19.5},{"wk":14,"opp":"DEN","pts":17},{"wk":15,"opp":"ARI","pts":21.5},{"wk":16,"opp":"NE","pts":17},{"wk":17,"opp":"MIN","pts":18},{"wk":18,"opp":"BUF","pts":16.8}]},{"abbr":"ARI","name":"Cardinals","color":"#97233F","ppg":18.4,"ppg_rest":18.4,"games_left":17,"playoff":60,"w15":20,"w16":19.5,"w17":20.5,"games":[{"wk":1,"opp":"LAC","pts":18},{"wk":2,"opp":"SEA","pts":17.3},{"wk":3,"opp":"SF","pts":17.5},{"wk":4,"opp":"NYG","pts":19.3},{"wk":5,"opp":"DET","pts":20},{"wk":6,"opp":"LAR","pts":17},{"wk":7,"opp":"DEN","pts":18},{"wk":8,"opp":"DAL","pts":18.5},{"wk":9,"opp":"SEA","pts":16},{"wk":10,"opp":"LAR","pts":18.5},{"wk":11,"opp":"KC","pts":16.5},{"wk":12,"opp":"WAS","pts":21.5},{"wk":13,"opp":"PHI","pts":17.5},{"wk":15,"opp":"NYJ","pts":20},{"wk":16,"opp":"NO","pts":19.5},{"wk":17,"opp":"LV","pts":20.5},{"wk":18,"opp":"SF","pts":18}]}]};
 
-  var BODY = document.getElementById("ptBody");
-  var TABLE = document.getElementById("ptTable");
-  var sortKey = "ppg", sortDir = -1;   // -1 = descending
-  var openTeam = null;
+  var ROOT   = document.getElementById("ptRoot");
+  var TABS   = document.getElementById("ptTabs");
+  var BODY   = document.getElementById("ptBody");        // season tbody
+  var TABLE  = document.getElementById("ptTable");       // season table
+  var WBODY  = document.getElementById("ptWeekBody");    // week tbody
+  var WTABLE = document.getElementById("ptWeekTable");
+  var CARDS  = document.getElementById("ptCards");
+  var PANES  = {
+    week:   document.getElementById("ptPaneWeek"),
+    games:  document.getElementById("ptPaneGames"),
+    season: document.getElementById("ptPaneSeason")
+  };
+
+  var tab = "season";
+  var seasonKey = "ppg";           // "ppg" or "ppg_rest"
+  var sortKey = seasonKey, sortDir = -1;      // season table
+  var wSortKey = "implied", wSortDir = -1;    // week table
+  var openTeam = null;                        // season expansion
+  var openWeekTeam = null;                    // week expansion
 
   function fmt(n){ return (Math.round(n*10)/10).toFixed(1); }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function sgn(n){ return (n>0?"+":"") + fmt(n); }
+  function has(){ return !!(DATA.week && DATA.week.games && DATA.week.games.length); }
 
   /* ---- heat ramp: low = slate gray, high = Sharp red ---- */
   var LO = 16, HI = 30;
@@ -227,12 +375,161 @@
     var t = Math.max(0, Math.min(1, (v - LO) / (HI - LO)));
     return (8 + t*92).toFixed(1) + "%";
   }
+  function spreadTxt(g){
+    if (g.spread == null) return "—";
+    if (g.spread === 0) return "PK";
+    return g.spread < 0 ? g.home.abbr+" "+fmt(g.spread) : g.away.abbr+" "+fmt(-g.spread);
+  }
+  function moveCls(m){ return m == null ? "flat" : (m > 0 ? "up" : (m < 0 ? "dn" : "flat")); }
+  function moveTxt(m){ return m == null ? "—" : (m === 0 ? "0.0" : sgn(m)); }
 
-  /* ---- 17-game breakdown ---- */
+  /* ===== flatten the week into one row per team ===== */
+  function weekRows(){
+    if (!has()) return [];
+    var out = [];
+    DATA.week.games.forEach(function(g){
+      [g.away, g.home].forEach(function(s){
+        out.push({
+          abbr:s.abbr, name:s.name, color:s.color, opp:s.opp,
+          implied:s.implied, open:s.open, move:s.move,
+          awaiting:s.awaiting, game:g,
+          home:(s === g.home)
+        });
+      });
+    });
+    // teams with no game this week
+    var playing = {};
+    out.forEach(function(r){ playing[r.abbr] = 1; });
+    (DATA.teams||[]).forEach(function(t){
+      if (!playing[t.abbr]) out.push({
+        abbr:t.abbr, name:t.name, color:t.color, opp:"BYE",
+        implied:null, open:null, move:null, bye:true, game:null
+      });
+    });
+    return out;
+  }
+
+  function wSorted(){
+    var rows = weekRows().slice();
+    var dir = wSortDir;
+    rows.sort(function(a,b){
+      // byes last, then rows still waiting on a real line — regardless of direction
+      if (!!a.bye !== !!b.bye) return a.bye ? 1 : -1;
+      if (!a.bye && (!!a.awaiting !== !!b.awaiting)) return a.awaiting ? 1 : -1;
+      if (wSortKey === "team") return (a.name < b.name ? -1 : 1) * (dir === -1 ? -1 : 1);
+      if (wSortKey === "opp")  return (String(a.opp) < String(b.opp) ? -1 : 1) * (dir === -1 ? -1 : 1);
+      var av = a[wSortKey], bv = b[wSortKey];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir === -1 ? bv - av : av - bv;
+    });
+    return rows;
+  }
+
+  /* ---- expanded detail for a week row: the game behind the number ---- */
+  function weekDetailHTML(r){
+    var g = r.game;
+    if (!g) return '<div class="pt-detail-inner"><div class="pt-dhead">'+esc(r.name)+' — on bye in week '+esc(DATA.week.number)+'</div></div>';
+    var bits = [];
+    bits.push('<div><span>Kickoff</span>'+esc(g.day)+' &middot; '+esc(g.slot)+'</div>');
+    bits.push('<div><span>Game total</span>'+
+      (g.total_open != null && g.total !== g.total_open ? fmt(g.total_open)+' &rarr; ' : '')+
+      (g.total != null ? fmt(g.total) : '—')+'</div>');
+    bits.push('<div><span>Spread</span>'+esc(spreadTxt(g))+'</div>');
+    bits.push('<div><span>'+esc(g.away.abbr)+'</span>'+
+      (g.away.implied != null ? fmt(g.away.implied) : '—')+
+      (g.away.move != null && g.away.move !== 0 ? ' <b class="pt-mv '+moveCls(g.away.move)+'">'+moveTxt(g.away.move)+'</b>' : '')+'</div>');
+    bits.push('<div><span>'+esc(g.home.abbr)+'</span>'+
+      (g.home.implied != null ? fmt(g.home.implied) : '—')+
+      (g.home.move != null && g.home.move !== 0 ? ' <b class="pt-mv '+moveCls(g.home.move)+'">'+moveTxt(g.home.move)+'</b>' : '')+'</div>');
+    return '<div class="pt-detail-inner">'+
+      '<div class="pt-dhead">'+esc(g.away.name)+' at '+esc(g.home.name)+
+      (g.awaiting ? ' — awaiting this week\u2019s line' : '')+'</div>'+
+      '<div class="pt-gline">'+bits.join("")+'</div>'+
+    '</div>';
+  }
+
+  function weekRowHTML(r, i){
+    var isOpen = openWeekTeam === r.abbr;
+    var cls = "tr-team" + (isOpen ? " open" : "") + (r.bye ? " byerow" : (r.awaiting ? " await" : ""));
+    var val = r.bye ? "—" : (r.implied != null ? fmt(r.implied) : "—");
+    var opn = r.bye || r.open == null ? "—" : fmt(r.open);
+    var mv  = r.bye ? "—" : moveTxt(r.move);
+    return '<tr class="'+cls+'" data-abbr="'+r.abbr+'">'+
+      '<td class="tm"><button class="pt-teambtn" type="button" aria-expanded="'+isOpen+'">'+
+        '<span class="pt-rank">'+(r.bye || r.awaiting ? "&middot;" : (i+1))+'</span>'+
+        '<span class="pt-chip" style="background:'+r.color+'"></span>'+
+        '<span class="pt-name">'+esc(r.name)+'</span>'+
+        '<span class="pt-caret">&#9654;</span>'+
+      '</button></td>'+
+      '<td class="opp">'+(r.bye ? "BYE" : (r.home ? "vs " : "@ ")+esc(r.opp))+'</td>'+
+      '<td class="big">'+val+(r.awaiting && !r.bye ? '<span class="pt-flag">OPEN</span>' : '')+'</td>'+
+      '<td>'+opn+'</td>'+
+      '<td><span class="pt-mv '+moveCls(r.bye ? null : r.move)+'">'+mv+'</span></td>'+
+    '</tr>' +
+    (isOpen ? '<tr class="pt-detail"><td colspan="5">'+weekDetailHTML(r)+'</td></tr>' : '');
+  }
+
+  /* ---- pinned band ---- */
+  function pinHTML(){
+    var p = DATA.pinned;
+    if (!p || !p.games || !p.games.length) return "";
+    var games = p.games.map(function(g){
+      var final = g.completed || g.state === "post";
+      var rows = [g.away, g.home].map(function(s){
+        return '<div class="pt-pin-row">'+
+          '<span class="pt-chip" style="background:'+s.color+'"></span>'+
+          '<span class="nm">'+esc(s.name)+'</span>'+
+          (final && s.score != null ? '<span class="sc">'+s.score+'</span>' : '')+
+          '<span class="val">'+(s.implied != null ? fmt(s.implied) : "—")+'</span>'+
+        '</div>';
+      }).join("");
+      return '<div class="pt-pin-g">'+rows+
+        '<div class="pt-pin-ft">'+esc(g.day)+' &middot; '+esc(g.slot)+
+        (final ? ' &middot; Final' : (g.state === "in" ? ' &middot; In progress' : '')) +
+        (g.total != null ? ' &middot; Total '+fmt(g.total) : '')+'</div>'+
+      '</div>';
+    }).join("");
+    return '<div class="pt-pin">'+
+      '<div class="pt-pin-hd">Still from week '+esc(p.number)+
+      '<span class="sub">The table below has already moved on to week '+esc(DATA.week ? DATA.week.number : "")+'</span></div>'+
+      games+
+    '</div>';
+  }
+
+  /* ---- matchup cards, grouped by kickoff slot ---- */
+  function cardsHTML(){
+    if (!has()) return "";
+    var out = [], lastSlot = null;
+    DATA.week.games.forEach(function(g){
+      var label = g.day + " · " + g.slot;
+      if (label !== lastSlot){ out.push('<div class="pt-slot">'+esc(label)+'</div>'); lastSlot = label; }
+      var sides = [g.away, g.home].map(function(s, idx){
+        return '<div class="pt-side">'+
+          '<span class="pt-chip" style="background:'+s.color+'"></span>'+
+          '<span class="nm">'+esc(s.name)+'</span>'+
+          '<span class="mv pt-mv '+moveCls(s.move)+'">'+(s.move != null && s.move !== 0 ? moveTxt(s.move) : "")+'</span>'+
+          '<span class="val">'+(s.implied != null ? fmt(s.implied) : "—")+'</span>'+
+        '</div>';
+      }).join("");
+      out.push('<div class="pt-card">'+sides+
+        '<div class="pt-cfoot">'+
+          '<div>Total <b>'+(g.total != null ? fmt(g.total) : "—")+'</b></div>'+
+          '<div>Spread <b>'+esc(spreadTxt(g))+'</b></div>'+
+          (g.awaiting ? '<div>Awaiting this week\u2019s line</div>' : '')+
+        '</div>'+
+      '</div>');
+    });
+    return out.join("");
+  }
+
+  /* ---- season table (unchanged behaviour) ---- */
   function detailHTML(t){
     var rows = [];
     var byWk = {};
-    t.games.forEach(function(g){ byWk[g.wk] = g; });
+    var anyPlayed = false;
+    t.games.forEach(function(g){ byWk[g.wk] = g; if (g.played) anyPlayed = true; });
     for (var w = 1; w <= 18; w++){
       var g = byWk[w];
       if (!g){
@@ -240,19 +537,39 @@
           '<span class="op">BYE</span><span class="track"></span><span class="pv">—</span></div>');
         continue;
       }
-      rows.push('<div class="pt-bar"><span class="wk">W'+w+'</span>'+
-        '<span class="op">'+esc(g.opp)+'</span>'+
-        '<span class="track"><span class="fill" style="width:'+width(g.pts)+';background:'+heat(g.pts)+'"></span></span>'+
-        '<span class="pv">'+fmt(g.pts)+'</span></div>');
+      /* a played week shows what actually happened, not what was projected */
+      var val = g.played ? g.score : g.pts;
+      var opTxt = g.played
+        ? esc(g.opp)+' '+(g.score > g.opp_score ? 'W' : g.score < g.opp_score ? 'L' : 'T')
+        : esc(g.opp);
+      rows.push('<div class="pt-bar'+(g.played ? ' done' : '')+'"><span class="wk">W'+w+'</span>'+
+        '<span class="op">'+opTxt+'</span>'+
+        '<span class="track"><span class="fill" style="width:'+width(val)+
+          (g.played ? '' : ';background:'+heat(val))+'"></span></span>'+
+        '<span class="pv">'+(g.played ? g.score : fmt(g.pts))+'</span></div>');
+    }
+    var head = esc(t.name) + ' — ';
+    if (anyPlayed && t.games_left > 0 && t.ppg_rest != null){
+      head += t.games_left + ' game' + (t.games_left === 1 ? '' : 's') + ' left &middot; ' +
+              fmt(t.ppg_rest) + ' implied pts / game rest of season';
+    } else if (t.games_left === 0){
+      head += 'season complete &middot; ' + fmt(t.ppg) + ' implied pts / game';
+    } else {
+      head += 'implied total by week &middot; ' + fmt(t.ppg) + ' pts / game';
     }
     return '<div class="pt-detail-inner">'+
-      '<div class="pt-dhead">'+esc(t.name)+' — implied total by week &middot; '+fmt(t.ppg)+' pts / game</div>'+
+      '<div class="pt-dhead">'+head+'</div>'+
       '<div class="pt-bars">'+rows.join("")+'</div>'+
       '<div class="pt-legend"><span>Lower</span><span class="pt-ramp"></span><span>Higher</span></div>'+
+      (anyPlayed ? '<div class="pt-legend res"><span class="pt-swatch"></span><span>Solid = final score</span></div>' : '')+
     '</div>';
   }
 
-  /* ---- table body ---- */
+  function seasonVal(t){
+    var v = t[seasonKey];
+    return v == null ? t.ppg : v;    // season over -> fall back to the full-season number
+  }
+
   function rowHTML(t, i){
     return '<tr class="tr-team'+(openTeam===t.abbr?" open":"")+'" data-abbr="'+t.abbr+'">'+
       '<td class="tm"><button class="pt-teambtn" type="button" aria-expanded="'+(openTeam===t.abbr)+'">'+
@@ -261,7 +578,7 @@
         '<span class="pt-name">'+esc(t.name)+'</span>'+
         '<span class="pt-caret">▶</span>'+
       '</button></td>'+
-      '<td class="big">'+fmt(t.ppg)+'</td>'+
+      '<td class="big">'+fmt(seasonVal(t))+'</td>'+
       '<td class="po">'+fmt(t.playoff)+'</td>'+
       '<td>'+fmt(t.w15)+'</td>'+
       '<td>'+fmt(t.w16)+'</td>'+
@@ -272,32 +589,74 @@
       : '');
   }
 
-  function render(){
-    var rows = DATA.teams.slice().sort(function(a,b){
-      if (sortKey === "team") return (a.name < b.name ? -1 : 1) * (sortDir === -1 ? -1 : 1);
-      var d = a[sortKey] - b[sortKey];
-      return sortDir === -1 ? -d : d;
-    });
-    BODY.innerHTML = rows.map(rowHTML).join("");
-    TABLE.querySelectorAll("thead th").forEach(function(th){
+  function marks(table, key, dir){
+    table.querySelectorAll("thead th").forEach(function(th){
       var isTeam = th.classList.contains("tm");
       var k = isTeam ? "team" : th.getAttribute("data-k");
-      if (sortKey === k){
-        th.setAttribute("aria-sort", sortDir === -1 ? "descending" : "ascending");
-        th.querySelector(".ar").textContent = sortDir === -1 ? "▼" : "▲";
+      if (key === k){
+        th.setAttribute("aria-sort", dir === -1 ? "descending" : "ascending");
+        th.querySelector(".ar").textContent = dir === -1 ? "▼" : "▲";
       } else {
         th.removeAttribute("aria-sort");
       }
     });
   }
 
+  function renderSeason(){
+    var rows = DATA.teams.slice().sort(function(a,b){
+      if (sortKey === "team") return (a.name < b.name ? -1 : 1) * (sortDir === -1 ? -1 : 1);
+      var av = (sortKey === "ppg" || sortKey === "ppg_rest") ? seasonVal(a) : a[sortKey];
+      var bv = (sortKey === "ppg" || sortKey === "ppg_rest") ? seasonVal(b) : b[sortKey];
+      var d = av - bv;
+      return sortDir === -1 ? -d : d;
+    });
+    BODY.innerHTML = rows.map(rowHTML).join("");
+    marks(TABLE, sortKey, sortDir);
+  }
+
+  function renderWeek(){
+    if (!WBODY) return;
+    WBODY.innerHTML = wSorted().map(weekRowHTML).join("");
+    marks(WTABLE, wSortKey, wSortDir);
+    var p = pinHTML();
+    var a = document.getElementById("ptPinWeek");
+    var b = document.getElementById("ptPinGames");
+    if (a) a.innerHTML = p;
+    if (b) b.innerHTML = p;
+    if (CARDS) CARDS.innerHTML = cardsHTML();
+  }
+
+  function setTab(t){
+    tab = t;
+    Object.keys(PANES).forEach(function(k){
+      if (PANES[k]) PANES[k].classList.toggle("is-off", k !== t);
+    });
+    if (TABS) TABS.querySelectorAll(".pt-tab").forEach(function(b){
+      b.classList.toggle("is-on", b.getAttribute("data-tab") === t);
+    });
+  }
+
   /* ---- interactions ---- */
+  if (TABS) TABS.addEventListener("click", function(e){
+    var b = e.target.closest(".pt-tab");
+    if (b) setTab(b.getAttribute("data-tab"));
+  });
+
   TABLE.querySelectorAll("thead th").forEach(function(th){
     th.querySelector(".pt-sortbtn").addEventListener("click", function(){
       var k = th.classList.contains("tm") ? "team" : th.getAttribute("data-k");
       if (sortKey === k) sortDir = -sortDir;
       else { sortKey = k; sortDir = (k === "team") ? 1 : -1; }
-      render();
+      renderSeason();
+    });
+  });
+
+  if (WTABLE) WTABLE.querySelectorAll("thead th").forEach(function(th){
+    th.querySelector(".pt-sortbtn").addEventListener("click", function(){
+      var k = th.classList.contains("tm") ? "team" : th.getAttribute("data-k");
+      if (wSortKey === k) wSortDir = -wSortDir;
+      else { wSortKey = k; wSortDir = (k === "team" || k === "opp") ? 1 : -1; }
+      renderWeek();
     });
   });
 
@@ -306,19 +665,55 @@
     if (!btn) return;
     var abbr = btn.closest("tr").getAttribute("data-abbr");
     openTeam = (openTeam === abbr) ? null : abbr;
-    render();
+    renderSeason();
+  });
+
+  if (WBODY) WBODY.addEventListener("click", function(e){
+    var btn = e.target.closest(".pt-teambtn");
+    if (!btn) return;
+    var abbr = btn.closest("tr").getAttribute("data-abbr");
+    openWeekTeam = (openWeekTeam === abbr) ? null : abbr;
+    renderWeek();
   });
 
   /* ---- boot: markup is already correct; only re-render on live data ---- */
   if (DATA_URL && typeof fetch === "function"){
     try{
       fetch(DATA_URL,{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
-        if (j && j.teams && j.teams.length === 32){
-          DATA = j;
-          var u = document.getElementById("ptUpdated");
-          if (u && j.updated) u.textContent = "Updated " + j.updated;
-          render();
+        if (!j || !j.teams || j.teams.length !== 32) return;
+        var wasInSeason = has();
+        DATA = j;
+        var u = document.getElementById("ptUpdated");
+        if (u && j.updated) u.textContent = "Updated " + j.updated;
+        var tl = document.getElementById("ptTabWeek");
+        if (tl && j.week) tl.textContent = "Week " + j.week.number;
+        var sub = document.getElementById("ptSub");
+        if (sub && j.week) sub.textContent =
+          "Projected points for every team in week " + j.week.number +
+          " — straight from the sportsbook lines, with the week\u2019s opening number and the move since.";
+        // the feed can flip in or out of season between page load and fetch
+        if (TABS) TABS.classList.toggle("is-off", !has());
+        if (!has() && tab !== "season") setTab("season");
+        if (has() && !wasInSeason) setTab("week");
+
+        /* once games have been played the headline season column becomes the
+           rest-of-season average — relabel the header to match */
+        var anyLeft = (j.teams || []).some(function(t){ return t.ppg_rest != null && t.games_left < 17; });
+        var newKey = anyLeft ? "ppg_rest" : "ppg";
+        if (newKey !== seasonKey){
+          if (sortKey === seasonKey) sortKey = newKey;
+          seasonKey = newKey;
+          var th = document.getElementById("ptThPpg");
+          if (th){
+            th.setAttribute("data-k", newKey);
+            var btn = th.querySelector(".pt-sortbtn");
+            var ar = btn.querySelector(".ar");
+            btn.textContent = (newKey === "ppg_rest" ? "Rest of Season" : "Pts / Game") + " ";
+            btn.appendChild(ar);
+          }
         }
+        renderSeason();
+        renderWeek();
       }).catch(function(){});    // unreachable/bad JSON -> keep pre-rendered lines
     }catch(e){}
   }

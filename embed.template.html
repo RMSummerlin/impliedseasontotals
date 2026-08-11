@@ -3,9 +3,22 @@
   Paste this ENTIRE block into an Avada "Code Block" element.
   Fragment only: <style> + one .pt-root <div> + <script>. No <html>/<head>/<body>.
 
-  SEO: the full 32-team table is PRE-RENDERED as real <tr> rows in the markup
-  below, so crawlers read it with no JavaScript. The script only adds sorting,
-  the expandable per-team breakdown, and (optionally) live line updates.
+  THREE VIEWS:
+    This Week  — every team's implied total for the current week, sortable,
+                 with the week's opening number and the movement since.
+    Matchups   — the same games grouped by kickoff slot.
+    Full Season— the 17-game averages and fantasy playoff weeks 15-17.
+
+  In-season the tool opens on This Week. Before week 1 and after week 18 the
+  weekly tabs are hidden and it opens on Full Season.
+
+  PINNED: on Monday the table flips to the new week while the previous week's
+  Monday night game stays pinned at the top, clearly labelled, carrying its
+  final score until Tuesday morning.
+
+  SEO: the default view's rows AND the season table are PRE-RENDERED as real
+  markup, so crawlers read both with no JavaScript. The script adds sorting,
+  the expandable breakdowns, tab switching, and live line updates.
 
   Implied total = game total / 2  -  team spread / 2
 
@@ -17,6 +30,7 @@
   --pt-black:#000; --pt-red:#cc0000; --pt-bg:#f4f5f7; --pt-card:#fff;
   --pt-soft:#f9fafb; --pt-text:#111; --pt-gray:#7f8c9a;
   --pt-bd:#cdd5de; --pt-bd2:#dde2e8;
+  --pt-up:#1a7f37; --pt-dn:#cc0000;
   font-family:'Interstate Condensed','Oswald','Arial Narrow',sans-serif;
   color:var(--pt-text); background:var(--pt-bg);
   display:flex; flex-direction:column; max-height:88svh; overflow:hidden;
@@ -24,13 +38,26 @@
 }
 .pt-root *{box-sizing:border-box; margin:0; padding:0; font-family:inherit;}
 .pt-root button{font-family:inherit; cursor:pointer;}
+.pt-root .is-off{display:none !important;}
 
 .pt-header{flex:0 0 auto; background:var(--pt-black); color:#fff; padding:14px 14px 12px;}
 .pt-title{font-size:20px; font-weight:800; letter-spacing:.3px; line-height:1.05; text-transform:uppercase;}
 .pt-sub{font-size:12.5px; color:#c9ced6; margin-top:4px; line-height:1.25;}
 .pt-updated{font-size:11px; color:#8f97a1; margin-top:6px; text-transform:uppercase; letter-spacing:.4px; font-weight:700;}
 
-/* the table scrolls in BOTH axes inside its own panel */
+/* ---- tab bar ---- */
+.pt-tabs{flex:0 0 auto; display:flex; background:var(--pt-card); border-bottom:1px solid var(--pt-bd);}
+.pt-root .pt-tab{
+  flex:1 1 0; min-width:0; padding:11px 4px; background:none !important;
+  border:none !important; border-bottom:3px solid transparent !important;
+  box-shadow:none !important; text-shadow:none !important;
+  color:var(--pt-gray) !important; font-size:11.5px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.4px; line-height:1.1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pt-root .pt-tab.is-on{color:var(--pt-black) !important; border-bottom-color:var(--pt-red) !important;}
+
+/* the panes scroll in BOTH axes inside their own panel */
 .pt-scroll{flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; background:var(--pt-card);}
 
 .pt-root .pt-table{width:100%; margin:0 !important; border:none !important;
@@ -93,6 +120,55 @@
 .pt-root .pt-table tbody td.big{font-size:16px !important; font-weight:800 !important; color:var(--pt-black) !important;}
 .pt-root .pt-table tbody td.po{font-weight:800 !important; color:var(--pt-black) !important;}
 
+/* opponent cell + movement */
+.pt-root .pt-table tbody td.opp{color:var(--pt-gray) !important; font-size:13px !important;}
+.pt-root .pt-mv{font-weight:800; font-size:13px;}
+.pt-root .pt-mv.up{color:var(--pt-up) !important;}
+.pt-root .pt-mv.dn{color:var(--pt-dn) !important;}
+.pt-root .pt-mv.flat{color:var(--pt-gray) !important;}
+
+/* rows still waiting on a real line, and bye rows: parked at the bottom */
+.pt-root tr.await td, .pt-root tr.byerow td{background:var(--pt-soft) !important; color:var(--pt-gray) !important;}
+.pt-root tr.await td.big{color:var(--pt-gray) !important;}
+.pt-root tr.byerow .pt-name{color:var(--pt-gray) !important;}
+.pt-root .pt-flag{display:inline-block; margin-left:5px; padding:1px 4px; border-radius:3px;
+  background:#eef1f4; color:var(--pt-gray); font-size:9px; font-weight:800;
+  letter-spacing:.3px; vertical-align:1px;}
+
+/* ---- pinned band: last week's leftovers ---- */
+.pt-pin{margin:10px 10px 2px; background:var(--pt-card); border:1px solid var(--pt-bd);
+  border-left:4px solid var(--pt-red); border-radius:8px; overflow:hidden;}
+.pt-pin-hd{padding:7px 10px; background:#fdf3f3; color:var(--pt-red);
+  font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.45px; line-height:1.3;}
+.pt-pin-hd .sub{display:block; color:var(--pt-gray); font-weight:700; letter-spacing:.3px; margin-top:2px;}
+.pt-pin-g{border-top:1px solid var(--pt-bd2); padding:8px 10px;}
+.pt-pin-row{display:flex; align-items:center; gap:8px;}
+.pt-pin-row + .pt-pin-row{margin-top:5px;}
+.pt-pin-row .nm{flex:1 1 auto; min-width:0; font-size:13.5px; font-weight:800;
+  text-transform:uppercase; overflow:hidden; text-overflow:ellipsis;}
+.pt-pin-row .sc{flex:0 0 30px; text-align:right; font-size:15px; font-weight:800; color:var(--pt-black);}
+.pt-pin-row .val{flex:0 0 42px; text-align:right; font-size:13.5px; font-weight:800; color:#33404d;}
+.pt-pin-ft{margin-top:6px; font-size:10.5px; font-weight:700; color:var(--pt-gray);
+  text-transform:uppercase; letter-spacing:.3px;}
+
+/* ---- matchup cards ---- */
+.pt-slot{padding:14px 12px 6px; font-size:11px; font-weight:800; color:var(--pt-gray);
+  text-transform:uppercase; letter-spacing:.5px;}
+.pt-card{margin:0 10px 8px; background:var(--pt-card); border:1px solid var(--pt-bd);
+  border-radius:8px; overflow:hidden;}
+.pt-side{display:flex; align-items:center; gap:8px; padding:9px 10px;}
+.pt-side + .pt-side{border-top:1px solid var(--pt-bd2);}
+.pt-side .pt-chip{height:20px;}
+.pt-side .nm{flex:1 1 auto; min-width:0; font-size:14px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.2px; overflow:hidden; text-overflow:ellipsis;}
+.pt-side .val{flex:0 0 46px; text-align:right; font-size:17px; font-weight:800;
+  color:var(--pt-black); font-variant-numeric:tabular-nums;}
+.pt-side .mv{flex:0 0 44px; text-align:right; font-size:11.5px; font-weight:800;}
+.pt-cfoot{display:flex; flex-wrap:wrap; gap:4px 12px; padding:7px 10px; background:var(--pt-soft);
+  border-top:1px solid var(--pt-bd2); font-size:10.5px; font-weight:700; color:var(--pt-gray);
+  text-transform:uppercase; letter-spacing:.3px;}
+.pt-cfoot b{color:#33404d; font-weight:800;}
+
 /* expandable detail — text-align must be reset: it inherits `right` from the td */
 .pt-root tr.pt-detail > td{
   padding:0 !important; height:auto !important; text-align:left !important;
@@ -114,10 +190,26 @@
 .pt-root .pt-bar .pv{flex:0 0 34px; font-size:12.5px; font-weight:800; text-align:right; color:var(--pt-black);}
 .pt-root .pt-bar.bye .op, .pt-root .pt-bar.bye .pv{color:var(--pt-gray); font-weight:700;}
 .pt-root .pt-bar.bye .track{background:repeating-linear-gradient(45deg,#eef1f4,#eef1f4 4px,#e2e7ec 4px,#e2e7ec 8px);}
+/* played weeks: solid slate = a result, not a projection */
+.pt-root .pt-bar.done .fill{background:#46586a !important;}
+.pt-root .pt-bar.done .pv{color:var(--pt-black);}
+.pt-root .pt-bar.done .op{color:var(--pt-gray);}
 .pt-root .pt-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px;
   color:var(--pt-gray); font-weight:700; text-transform:uppercase; letter-spacing:.3px;}
+.pt-root .pt-legend.res{margin-top:5px;}
+.pt-root .pt-swatch{display:block; flex:0 0 26px; height:7px; border-radius:4px; background:#46586a;}
 .pt-root .pt-ramp{display:block; flex:0 0 90px; height:7px; border-radius:4px;
   background:linear-gradient(90deg,#9aa7b2,#d98a6a,#cc0000);}
+
+/* week-row detail: the game behind the number */
+.pt-root .pt-gline{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:2px;}
+.pt-root .pt-gline div{font-size:12px; font-weight:700; color:#33404d;}
+.pt-root .pt-gline span{color:var(--pt-gray); font-weight:800; font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.3px; display:block;}
+
+.pt-foot{flex:0 0 auto; padding:8px 12px; background:var(--pt-soft);
+  border-top:1px solid var(--pt-bd); font-size:10.5px; font-weight:700;
+  color:var(--pt-gray); text-transform:uppercase; letter-spacing:.3px;}
 
 @media (min-width:641px){
   .pt-title{font-size:24px;}
@@ -125,33 +217,72 @@
   .pt-table tbody td{font-size:15px;}
   .pt-header{padding:16px 18px 14px;}
   .pt-bar .op{flex:0 0 70px;}
+  .pt-tab{font-size:12.5px;}
+  .pt-side .nm{font-size:15px;}
 }
 </style>
 
 <div class="pt-root" id="ptRoot">
   <div class="pt-header">
-    <div class="pt-title">NFL Implied Team Totals</div>
-    <div class="pt-sub">Projected points for every team, every game — straight from the sportsbook lines. Tap a team for its full 17-game slate.</div>
+    <div class="pt-title" id="ptTitle">__TITLE__</div>
+    <div class="pt-sub" id="ptSub">__SUB__</div>
     <div class="pt-updated" id="ptUpdated">Updated __UPDATED__</div>
   </div>
 
-  <div class="pt-scroll">
-    <table class="pt-table" id="ptTable">
-      <thead>
-        <tr>
-          <th class="tm"><button class="pt-sortbtn" type="button">Team <span class="ar">▼</span></button></th>
-          <th data-k="ppg" aria-sort="descending"><button class="pt-sortbtn" type="button">Pts / Game <span class="ar">▼</span></button></th>
-          <th data-k="playoff"><button class="pt-sortbtn" type="button">Playoff Pts <span class="ar">▼</span></button></th>
-          <th data-k="w15"><button class="pt-sortbtn" type="button">Wk 15 <span class="ar">▼</span></button></th>
-          <th data-k="w16"><button class="pt-sortbtn" type="button">Wk 16 <span class="ar">▼</span></button></th>
-          <th data-k="w17"><button class="pt-sortbtn" type="button">Wk 17 <span class="ar">▼</span></button></th>
-        </tr>
-      </thead>
-      <tbody id="ptBody">
-__ROWS__
-      </tbody>
-    </table>
+  <div class="pt-tabs__TABS_OFF__" id="ptTabs">
+    <button class="pt-tab__ON_WEEK__" type="button" data-tab="week" id="ptTabWeek">__WEEK_TAB_LABEL__</button>
+    <button class="pt-tab__ON_GAMES__" type="button" data-tab="games">Matchups</button>
+    <button class="pt-tab__ON_SEASON__" type="button" data-tab="season">Full Season</button>
   </div>
+
+  <div class="pt-scroll" id="ptScroll">
+
+    <div class="pt-pane__PANE_WEEK_OFF__" id="ptPaneWeek">
+      <div id="ptPinWeek">__PINNED__</div>
+      <table class="pt-table" id="ptWeekTable">
+        <thead>
+          <tr>
+            <th class="tm"><button class="pt-sortbtn" type="button">Team <span class="ar">▼</span></button></th>
+            <th data-k="opp"><button class="pt-sortbtn" type="button">Opp <span class="ar">▼</span></button></th>
+            <th data-k="implied" aria-sort="descending"><button class="pt-sortbtn" type="button">Implied <span class="ar">▼</span></button></th>
+            <th data-k="open"><button class="pt-sortbtn" type="button">Open <span class="ar">▼</span></button></th>
+            <th data-k="move"><button class="pt-sortbtn" type="button">Move <span class="ar">▼</span></button></th>
+          </tr>
+        </thead>
+        <tbody id="ptWeekBody">
+__WEEK_ROWS__
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pt-pane__PANE_GAMES_OFF__" id="ptPaneGames">
+      <div id="ptPinGames">__PINNED_GAMES__</div>
+      <div id="ptCards">
+__GAME_CARDS__
+      </div>
+    </div>
+
+    <div class="pt-pane__PANE_SEASON_OFF__" id="ptPaneSeason">
+      <table class="pt-table" id="ptTable">
+        <thead>
+          <tr>
+            <th class="tm"><button class="pt-sortbtn" type="button">Team <span class="ar">▼</span></button></th>
+            <th data-k="__SEASON_KEY__" aria-sort="descending" id="ptThPpg"><button class="pt-sortbtn" type="button">__SEASON_LABEL__ <span class="ar">▼</span></button></th>
+            <th data-k="playoff"><button class="pt-sortbtn" type="button">Playoff Pts <span class="ar">▼</span></button></th>
+            <th data-k="w15"><button class="pt-sortbtn" type="button">Wk 15 <span class="ar">▼</span></button></th>
+            <th data-k="w16"><button class="pt-sortbtn" type="button">Wk 16 <span class="ar">▼</span></button></th>
+            <th data-k="w17"><button class="pt-sortbtn" type="button">Wk 17 <span class="ar">▼</span></button></th>
+          </tr>
+        </thead>
+        <tbody id="ptBody">
+__ROWS__
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="pt-foot" id="ptFoot">__FOOT__</div>
 </div>
 
 <script>
@@ -164,14 +295,31 @@ __ROWS__
 
   var DATA = __SEED__;
 
-  var BODY = document.getElementById("ptBody");
-  var TABLE = document.getElementById("ptTable");
-  var sortKey = "ppg", sortDir = -1;   // -1 = descending
-  var openTeam = null;
+  var ROOT   = document.getElementById("ptRoot");
+  var TABS   = document.getElementById("ptTabs");
+  var BODY   = document.getElementById("ptBody");        // season tbody
+  var TABLE  = document.getElementById("ptTable");       // season table
+  var WBODY  = document.getElementById("ptWeekBody");    // week tbody
+  var WTABLE = document.getElementById("ptWeekTable");
+  var CARDS  = document.getElementById("ptCards");
+  var PANES  = {
+    week:   document.getElementById("ptPaneWeek"),
+    games:  document.getElementById("ptPaneGames"),
+    season: document.getElementById("ptPaneSeason")
+  };
+
+  var tab = "__DEFAULT_TAB__";
+  var seasonKey = "__SEASON_KEY__";           // "ppg" or "ppg_rest"
+  var sortKey = seasonKey, sortDir = -1;      // season table
+  var wSortKey = "implied", wSortDir = -1;    // week table
+  var openTeam = null;                        // season expansion
+  var openWeekTeam = null;                    // week expansion
 
   function fmt(n){ return (Math.round(n*10)/10).toFixed(1); }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function sgn(n){ return (n>0?"+":"") + fmt(n); }
+  function has(){ return !!(DATA.week && DATA.week.games && DATA.week.games.length); }
 
   /* ---- heat ramp: low = slate gray, high = Sharp red ---- */
   var LO = 16, HI = 30;
@@ -185,12 +333,161 @@ __ROWS__
     var t = Math.max(0, Math.min(1, (v - LO) / (HI - LO)));
     return (8 + t*92).toFixed(1) + "%";
   }
+  function spreadTxt(g){
+    if (g.spread == null) return "—";
+    if (g.spread === 0) return "PK";
+    return g.spread < 0 ? g.home.abbr+" "+fmt(g.spread) : g.away.abbr+" "+fmt(-g.spread);
+  }
+  function moveCls(m){ return m == null ? "flat" : (m > 0 ? "up" : (m < 0 ? "dn" : "flat")); }
+  function moveTxt(m){ return m == null ? "—" : (m === 0 ? "0.0" : sgn(m)); }
 
-  /* ---- 17-game breakdown ---- */
+  /* ===== flatten the week into one row per team ===== */
+  function weekRows(){
+    if (!has()) return [];
+    var out = [];
+    DATA.week.games.forEach(function(g){
+      [g.away, g.home].forEach(function(s){
+        out.push({
+          abbr:s.abbr, name:s.name, color:s.color, opp:s.opp,
+          implied:s.implied, open:s.open, move:s.move,
+          awaiting:s.awaiting, game:g,
+          home:(s === g.home)
+        });
+      });
+    });
+    // teams with no game this week
+    var playing = {};
+    out.forEach(function(r){ playing[r.abbr] = 1; });
+    (DATA.teams||[]).forEach(function(t){
+      if (!playing[t.abbr]) out.push({
+        abbr:t.abbr, name:t.name, color:t.color, opp:"BYE",
+        implied:null, open:null, move:null, bye:true, game:null
+      });
+    });
+    return out;
+  }
+
+  function wSorted(){
+    var rows = weekRows().slice();
+    var dir = wSortDir;
+    rows.sort(function(a,b){
+      // byes last, then rows still waiting on a real line — regardless of direction
+      if (!!a.bye !== !!b.bye) return a.bye ? 1 : -1;
+      if (!a.bye && (!!a.awaiting !== !!b.awaiting)) return a.awaiting ? 1 : -1;
+      if (wSortKey === "team") return (a.name < b.name ? -1 : 1) * (dir === -1 ? -1 : 1);
+      if (wSortKey === "opp")  return (String(a.opp) < String(b.opp) ? -1 : 1) * (dir === -1 ? -1 : 1);
+      var av = a[wSortKey], bv = b[wSortKey];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir === -1 ? bv - av : av - bv;
+    });
+    return rows;
+  }
+
+  /* ---- expanded detail for a week row: the game behind the number ---- */
+  function weekDetailHTML(r){
+    var g = r.game;
+    if (!g) return '<div class="pt-detail-inner"><div class="pt-dhead">'+esc(r.name)+' — on bye in week '+esc(DATA.week.number)+'</div></div>';
+    var bits = [];
+    bits.push('<div><span>Kickoff</span>'+esc(g.day)+' &middot; '+esc(g.slot)+'</div>');
+    bits.push('<div><span>Game total</span>'+
+      (g.total_open != null && g.total !== g.total_open ? fmt(g.total_open)+' &rarr; ' : '')+
+      (g.total != null ? fmt(g.total) : '—')+'</div>');
+    bits.push('<div><span>Spread</span>'+esc(spreadTxt(g))+'</div>');
+    bits.push('<div><span>'+esc(g.away.abbr)+'</span>'+
+      (g.away.implied != null ? fmt(g.away.implied) : '—')+
+      (g.away.move != null && g.away.move !== 0 ? ' <b class="pt-mv '+moveCls(g.away.move)+'">'+moveTxt(g.away.move)+'</b>' : '')+'</div>');
+    bits.push('<div><span>'+esc(g.home.abbr)+'</span>'+
+      (g.home.implied != null ? fmt(g.home.implied) : '—')+
+      (g.home.move != null && g.home.move !== 0 ? ' <b class="pt-mv '+moveCls(g.home.move)+'">'+moveTxt(g.home.move)+'</b>' : '')+'</div>');
+    return '<div class="pt-detail-inner">'+
+      '<div class="pt-dhead">'+esc(g.away.name)+' at '+esc(g.home.name)+
+      (g.awaiting ? ' — awaiting this week\u2019s line' : '')+'</div>'+
+      '<div class="pt-gline">'+bits.join("")+'</div>'+
+    '</div>';
+  }
+
+  function weekRowHTML(r, i){
+    var isOpen = openWeekTeam === r.abbr;
+    var cls = "tr-team" + (isOpen ? " open" : "") + (r.bye ? " byerow" : (r.awaiting ? " await" : ""));
+    var val = r.bye ? "—" : (r.implied != null ? fmt(r.implied) : "—");
+    var opn = r.bye || r.open == null ? "—" : fmt(r.open);
+    var mv  = r.bye ? "—" : moveTxt(r.move);
+    return '<tr class="'+cls+'" data-abbr="'+r.abbr+'">'+
+      '<td class="tm"><button class="pt-teambtn" type="button" aria-expanded="'+isOpen+'">'+
+        '<span class="pt-rank">'+(r.bye || r.awaiting ? "&middot;" : (i+1))+'</span>'+
+        '<span class="pt-chip" style="background:'+r.color+'"></span>'+
+        '<span class="pt-name">'+esc(r.name)+'</span>'+
+        '<span class="pt-caret">&#9654;</span>'+
+      '</button></td>'+
+      '<td class="opp">'+(r.bye ? "BYE" : (r.home ? "vs " : "@ ")+esc(r.opp))+'</td>'+
+      '<td class="big">'+val+(r.awaiting && !r.bye ? '<span class="pt-flag">OPEN</span>' : '')+'</td>'+
+      '<td>'+opn+'</td>'+
+      '<td><span class="pt-mv '+moveCls(r.bye ? null : r.move)+'">'+mv+'</span></td>'+
+    '</tr>' +
+    (isOpen ? '<tr class="pt-detail"><td colspan="5">'+weekDetailHTML(r)+'</td></tr>' : '');
+  }
+
+  /* ---- pinned band ---- */
+  function pinHTML(){
+    var p = DATA.pinned;
+    if (!p || !p.games || !p.games.length) return "";
+    var games = p.games.map(function(g){
+      var final = g.completed || g.state === "post";
+      var rows = [g.away, g.home].map(function(s){
+        return '<div class="pt-pin-row">'+
+          '<span class="pt-chip" style="background:'+s.color+'"></span>'+
+          '<span class="nm">'+esc(s.name)+'</span>'+
+          (final && s.score != null ? '<span class="sc">'+s.score+'</span>' : '')+
+          '<span class="val">'+(s.implied != null ? fmt(s.implied) : "—")+'</span>'+
+        '</div>';
+      }).join("");
+      return '<div class="pt-pin-g">'+rows+
+        '<div class="pt-pin-ft">'+esc(g.day)+' &middot; '+esc(g.slot)+
+        (final ? ' &middot; Final' : (g.state === "in" ? ' &middot; In progress' : '')) +
+        (g.total != null ? ' &middot; Total '+fmt(g.total) : '')+'</div>'+
+      '</div>';
+    }).join("");
+    return '<div class="pt-pin">'+
+      '<div class="pt-pin-hd">Still from week '+esc(p.number)+
+      '<span class="sub">The table below has already moved on to week '+esc(DATA.week ? DATA.week.number : "")+'</span></div>'+
+      games+
+    '</div>';
+  }
+
+  /* ---- matchup cards, grouped by kickoff slot ---- */
+  function cardsHTML(){
+    if (!has()) return "";
+    var out = [], lastSlot = null;
+    DATA.week.games.forEach(function(g){
+      var label = g.day + " · " + g.slot;
+      if (label !== lastSlot){ out.push('<div class="pt-slot">'+esc(label)+'</div>'); lastSlot = label; }
+      var sides = [g.away, g.home].map(function(s, idx){
+        return '<div class="pt-side">'+
+          '<span class="pt-chip" style="background:'+s.color+'"></span>'+
+          '<span class="nm">'+esc(s.name)+'</span>'+
+          '<span class="mv pt-mv '+moveCls(s.move)+'">'+(s.move != null && s.move !== 0 ? moveTxt(s.move) : "")+'</span>'+
+          '<span class="val">'+(s.implied != null ? fmt(s.implied) : "—")+'</span>'+
+        '</div>';
+      }).join("");
+      out.push('<div class="pt-card">'+sides+
+        '<div class="pt-cfoot">'+
+          '<div>Total <b>'+(g.total != null ? fmt(g.total) : "—")+'</b></div>'+
+          '<div>Spread <b>'+esc(spreadTxt(g))+'</b></div>'+
+          (g.awaiting ? '<div>Awaiting this week\u2019s line</div>' : '')+
+        '</div>'+
+      '</div>');
+    });
+    return out.join("");
+  }
+
+  /* ---- season table (unchanged behaviour) ---- */
   function detailHTML(t){
     var rows = [];
     var byWk = {};
-    t.games.forEach(function(g){ byWk[g.wk] = g; });
+    var anyPlayed = false;
+    t.games.forEach(function(g){ byWk[g.wk] = g; if (g.played) anyPlayed = true; });
     for (var w = 1; w <= 18; w++){
       var g = byWk[w];
       if (!g){
@@ -198,19 +495,39 @@ __ROWS__
           '<span class="op">BYE</span><span class="track"></span><span class="pv">—</span></div>');
         continue;
       }
-      rows.push('<div class="pt-bar"><span class="wk">W'+w+'</span>'+
-        '<span class="op">'+esc(g.opp)+'</span>'+
-        '<span class="track"><span class="fill" style="width:'+width(g.pts)+';background:'+heat(g.pts)+'"></span></span>'+
-        '<span class="pv">'+fmt(g.pts)+'</span></div>');
+      /* a played week shows what actually happened, not what was projected */
+      var val = g.played ? g.score : g.pts;
+      var opTxt = g.played
+        ? esc(g.opp)+' '+(g.score > g.opp_score ? 'W' : g.score < g.opp_score ? 'L' : 'T')
+        : esc(g.opp);
+      rows.push('<div class="pt-bar'+(g.played ? ' done' : '')+'"><span class="wk">W'+w+'</span>'+
+        '<span class="op">'+opTxt+'</span>'+
+        '<span class="track"><span class="fill" style="width:'+width(val)+
+          (g.played ? '' : ';background:'+heat(val))+'"></span></span>'+
+        '<span class="pv">'+(g.played ? g.score : fmt(g.pts))+'</span></div>');
+    }
+    var head = esc(t.name) + ' — ';
+    if (anyPlayed && t.games_left > 0 && t.ppg_rest != null){
+      head += t.games_left + ' game' + (t.games_left === 1 ? '' : 's') + ' left &middot; ' +
+              fmt(t.ppg_rest) + ' implied pts / game rest of season';
+    } else if (t.games_left === 0){
+      head += 'season complete &middot; ' + fmt(t.ppg) + ' implied pts / game';
+    } else {
+      head += 'implied total by week &middot; ' + fmt(t.ppg) + ' pts / game';
     }
     return '<div class="pt-detail-inner">'+
-      '<div class="pt-dhead">'+esc(t.name)+' — implied total by week &middot; '+fmt(t.ppg)+' pts / game</div>'+
+      '<div class="pt-dhead">'+head+'</div>'+
       '<div class="pt-bars">'+rows.join("")+'</div>'+
       '<div class="pt-legend"><span>Lower</span><span class="pt-ramp"></span><span>Higher</span></div>'+
+      (anyPlayed ? '<div class="pt-legend res"><span class="pt-swatch"></span><span>Solid = final score</span></div>' : '')+
     '</div>';
   }
 
-  /* ---- table body ---- */
+  function seasonVal(t){
+    var v = t[seasonKey];
+    return v == null ? t.ppg : v;    // season over -> fall back to the full-season number
+  }
+
   function rowHTML(t, i){
     return '<tr class="tr-team'+(openTeam===t.abbr?" open":"")+'" data-abbr="'+t.abbr+'">'+
       '<td class="tm"><button class="pt-teambtn" type="button" aria-expanded="'+(openTeam===t.abbr)+'">'+
@@ -219,7 +536,7 @@ __ROWS__
         '<span class="pt-name">'+esc(t.name)+'</span>'+
         '<span class="pt-caret">▶</span>'+
       '</button></td>'+
-      '<td class="big">'+fmt(t.ppg)+'</td>'+
+      '<td class="big">'+fmt(seasonVal(t))+'</td>'+
       '<td class="po">'+fmt(t.playoff)+'</td>'+
       '<td>'+fmt(t.w15)+'</td>'+
       '<td>'+fmt(t.w16)+'</td>'+
@@ -230,32 +547,74 @@ __ROWS__
       : '');
   }
 
-  function render(){
-    var rows = DATA.teams.slice().sort(function(a,b){
-      if (sortKey === "team") return (a.name < b.name ? -1 : 1) * (sortDir === -1 ? -1 : 1);
-      var d = a[sortKey] - b[sortKey];
-      return sortDir === -1 ? -d : d;
-    });
-    BODY.innerHTML = rows.map(rowHTML).join("");
-    TABLE.querySelectorAll("thead th").forEach(function(th){
+  function marks(table, key, dir){
+    table.querySelectorAll("thead th").forEach(function(th){
       var isTeam = th.classList.contains("tm");
       var k = isTeam ? "team" : th.getAttribute("data-k");
-      if (sortKey === k){
-        th.setAttribute("aria-sort", sortDir === -1 ? "descending" : "ascending");
-        th.querySelector(".ar").textContent = sortDir === -1 ? "▼" : "▲";
+      if (key === k){
+        th.setAttribute("aria-sort", dir === -1 ? "descending" : "ascending");
+        th.querySelector(".ar").textContent = dir === -1 ? "▼" : "▲";
       } else {
         th.removeAttribute("aria-sort");
       }
     });
   }
 
+  function renderSeason(){
+    var rows = DATA.teams.slice().sort(function(a,b){
+      if (sortKey === "team") return (a.name < b.name ? -1 : 1) * (sortDir === -1 ? -1 : 1);
+      var av = (sortKey === "ppg" || sortKey === "ppg_rest") ? seasonVal(a) : a[sortKey];
+      var bv = (sortKey === "ppg" || sortKey === "ppg_rest") ? seasonVal(b) : b[sortKey];
+      var d = av - bv;
+      return sortDir === -1 ? -d : d;
+    });
+    BODY.innerHTML = rows.map(rowHTML).join("");
+    marks(TABLE, sortKey, sortDir);
+  }
+
+  function renderWeek(){
+    if (!WBODY) return;
+    WBODY.innerHTML = wSorted().map(weekRowHTML).join("");
+    marks(WTABLE, wSortKey, wSortDir);
+    var p = pinHTML();
+    var a = document.getElementById("ptPinWeek");
+    var b = document.getElementById("ptPinGames");
+    if (a) a.innerHTML = p;
+    if (b) b.innerHTML = p;
+    if (CARDS) CARDS.innerHTML = cardsHTML();
+  }
+
+  function setTab(t){
+    tab = t;
+    Object.keys(PANES).forEach(function(k){
+      if (PANES[k]) PANES[k].classList.toggle("is-off", k !== t);
+    });
+    if (TABS) TABS.querySelectorAll(".pt-tab").forEach(function(b){
+      b.classList.toggle("is-on", b.getAttribute("data-tab") === t);
+    });
+  }
+
   /* ---- interactions ---- */
+  if (TABS) TABS.addEventListener("click", function(e){
+    var b = e.target.closest(".pt-tab");
+    if (b) setTab(b.getAttribute("data-tab"));
+  });
+
   TABLE.querySelectorAll("thead th").forEach(function(th){
     th.querySelector(".pt-sortbtn").addEventListener("click", function(){
       var k = th.classList.contains("tm") ? "team" : th.getAttribute("data-k");
       if (sortKey === k) sortDir = -sortDir;
       else { sortKey = k; sortDir = (k === "team") ? 1 : -1; }
-      render();
+      renderSeason();
+    });
+  });
+
+  if (WTABLE) WTABLE.querySelectorAll("thead th").forEach(function(th){
+    th.querySelector(".pt-sortbtn").addEventListener("click", function(){
+      var k = th.classList.contains("tm") ? "team" : th.getAttribute("data-k");
+      if (wSortKey === k) wSortDir = -wSortDir;
+      else { wSortKey = k; wSortDir = (k === "team" || k === "opp") ? 1 : -1; }
+      renderWeek();
     });
   });
 
@@ -264,19 +623,55 @@ __ROWS__
     if (!btn) return;
     var abbr = btn.closest("tr").getAttribute("data-abbr");
     openTeam = (openTeam === abbr) ? null : abbr;
-    render();
+    renderSeason();
+  });
+
+  if (WBODY) WBODY.addEventListener("click", function(e){
+    var btn = e.target.closest(".pt-teambtn");
+    if (!btn) return;
+    var abbr = btn.closest("tr").getAttribute("data-abbr");
+    openWeekTeam = (openWeekTeam === abbr) ? null : abbr;
+    renderWeek();
   });
 
   /* ---- boot: markup is already correct; only re-render on live data ---- */
   if (DATA_URL && typeof fetch === "function"){
     try{
       fetch(DATA_URL,{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){
-        if (j && j.teams && j.teams.length === 32){
-          DATA = j;
-          var u = document.getElementById("ptUpdated");
-          if (u && j.updated) u.textContent = "Updated " + j.updated;
-          render();
+        if (!j || !j.teams || j.teams.length !== 32) return;
+        var wasInSeason = has();
+        DATA = j;
+        var u = document.getElementById("ptUpdated");
+        if (u && j.updated) u.textContent = "Updated " + j.updated;
+        var tl = document.getElementById("ptTabWeek");
+        if (tl && j.week) tl.textContent = "Week " + j.week.number;
+        var sub = document.getElementById("ptSub");
+        if (sub && j.week) sub.textContent =
+          "Projected points for every team in week " + j.week.number +
+          " — straight from the sportsbook lines, with the week\u2019s opening number and the move since.";
+        // the feed can flip in or out of season between page load and fetch
+        if (TABS) TABS.classList.toggle("is-off", !has());
+        if (!has() && tab !== "season") setTab("season");
+        if (has() && !wasInSeason) setTab("week");
+
+        /* once games have been played the headline season column becomes the
+           rest-of-season average — relabel the header to match */
+        var anyLeft = (j.teams || []).some(function(t){ return t.ppg_rest != null && t.games_left < 17; });
+        var newKey = anyLeft ? "ppg_rest" : "ppg";
+        if (newKey !== seasonKey){
+          if (sortKey === seasonKey) sortKey = newKey;
+          seasonKey = newKey;
+          var th = document.getElementById("ptThPpg");
+          if (th){
+            th.setAttribute("data-k", newKey);
+            var btn = th.querySelector(".pt-sortbtn");
+            var ar = btn.querySelector(".ar");
+            btn.textContent = (newKey === "ppg_rest" ? "Rest of Season" : "Pts / Game") + " ";
+            btn.appendChild(ar);
+          }
         }
+        renderSeason();
+        renderWeek();
       }).catch(function(){});    // unreachable/bad JSON -> keep pre-rendered lines
     }catch(e){}
   }

@@ -2,11 +2,22 @@ name: update-implied-totals
 
 on:
   schedule:
-    # 13:00 UTC = 9am ET / 6am PT, every day.
-    # Runs daily so line movement is picked up quickly and the workflow
-    # stays "active" (GitHub disables scheduled workflows after 60 days
-    # of repo inactivity — each run commits a new `updated` date, which counts).
-    - cron: "0 13 * * *"
+    # Every 3 hours, at :20 past.
+    #
+    # Why :20 and not :00 — GitHub delays scheduled jobs when the queue is
+    # busy, and the top of the hour is the worst slot. Offsetting keeps the
+    # run close to its intended time.
+    #
+    # Why every 3 hours — two boundaries have to be caught promptly:
+    #   MON 00:00 ET  the display week flips to the new week
+    #   TUE 05:00 ET  last week's pinned Monday game drops off
+    # A 3-hour cadence lands inside both windows (06:20 UTC = 2:20am ET Monday,
+    # 09:20 UTC = 5:20am ET Tuesday) so the tool is correct before anyone is
+    # awake to look at it, and it keeps line movement reasonably fresh the rest
+    # of the week. The date stamp changes at UTC midnight, so there is at least
+    # one commit a day, which keeps the schedule from being auto-disabled after
+    # 60 days of repo inactivity.
+    - cron: "20 */3 * * *"
   workflow_dispatch: {}   # lets you run it manually from the Actions tab
 
 permissions:
@@ -39,6 +50,8 @@ jobs:
         run: |
           node -e "
             const d = require('./implied-totals.json');
+
+            /* ---- season block: unchanged guarantees ---- */
             if (!d.teams || d.teams.length !== 32) throw new Error('expected 32 teams, got ' + (d.teams||[]).length);
             const games = d.teams.reduce((s,t) => s + t.games.length, 0);
             if (games !== 544) throw new Error('expected 544 team-games, got ' + games);
@@ -49,9 +62,69 @@ jobs:
               if (Math.abs(po - t.playoff) > 0.051) throw new Error(t.abbr + ' playoff mismatch');
               const avg = Math.round((t.games.reduce((s,g) => s + g.pts, 0) / 17) * 10) / 10;
               if (Math.abs(avg - t.ppg) > 0.051) throw new Error(t.abbr + ' ppg mismatch');
+
+              /* rest-of-season average: games drop out only when final */
+              const left = t.games.filter(g => !g.played);
+              if (t.games_left !== left.length)
+                throw new Error(t.abbr + ' games_left ' + t.games_left + ' != ' + left.length + ' unplayed');
+              if (left.length) {
+                const ra = Math.round((left.reduce((s,g) => s + g.pts, 0) / left.length) * 10) / 10;
+                if (Math.abs(ra - t.ppg_rest) > 0.051)
+                  throw new Error(t.abbr + ' ppg_rest mismatch: ' + t.ppg_rest + ' vs ' + ra);
+              } else if (t.ppg_rest !== null) {
+                throw new Error(t.abbr + ' has no games left but ppg_rest is ' + t.ppg_rest);
+              }
+              for (const g of t.games) {
+                if (g.played && (g.score == null || g.opp_score == null))
+                  throw new Error(t.abbr + ' week ' + g.wk + ' is played but has no score');
+                if (!g.played && g.score != null)
+                  throw new Error(t.abbr + ' week ' + g.wk + ' has a score but is not marked played');
+              }
             }
+
+            /* ---- phase / week block ---- */
+            const phases = ['preseason','in_season','offseason'];
+            if (!phases.includes(d.phase)) throw new Error('bad phase: ' + d.phase);
+            if ((d.phase === 'in_season') !== (d.display_week != null))
+              throw new Error('phase/display_week disagree: ' + d.phase + ' / ' + d.display_week);
+
+            if (d.week) {
+              if (d.week.number !== d.display_week) throw new Error('week.number != display_week');
+              const g = d.week.games || [];
+              if (g.length < 12 || g.length > 16) throw new Error('week has ' + g.length + ' games');
+              const seen = new Set();
+              for (const x of g) {
+                for (const s of [x.home, x.away]) {
+                  if (!s || !s.abbr) throw new Error('week game missing a side');
+                  if (seen.has(s.abbr)) throw new Error(s.abbr + ' appears twice in week ' + d.week.number);
+                  seen.add(s.abbr);
+                  if (s.implied != null && !(s.implied > 5 && s.implied < 45))
+                    throw new Error(s.abbr + ' weekly implied out of range: ' + s.implied);
+                  /* movement must equal current minus the frozen opener */
+                  if (s.open != null && s.move != null) {
+                    const m = Math.round((s.implied - s.open) * 10) / 10;
+                    if (Math.abs(m - s.move) > 0.051)
+                      throw new Error(s.abbr + ' move mismatch: ' + s.move + ' vs ' + m);
+                  }
+                  /* a game still on the DK baseline must not claim a week opener */
+                  if (s.awaiting && s.open != null)
+                    throw new Error(s.abbr + ' is awaiting a line but has an opener');
+                }
+              }
+              if (seen.size + (32 - seen.size) !== 32) throw new Error('team count off');
+            }
+
+            if (d.pinned) {
+              if (d.pinned.number !== d.display_week - 1)
+                throw new Error('pinned week ' + d.pinned.number + ' is not the week before ' + d.display_week);
+              if (!d.pinned.games || !d.pinned.games.length) throw new Error('pinned block with no games');
+              if (d.pinned.games.length > 6) throw new Error('suspiciously many pinned games: ' + d.pinned.games.length);
+            }
+
             const live = d.teams.reduce((s,t) => s + t.games_live, 0);
-            console.log('OK — 32 teams, 544 team-games, ' + live + ' on live lines, source=' + d.source);
+            console.log('OK — 32 teams, 544 team-games, ' + live + ' on live lines, source=' + d.source +
+                        ', phase=' + d.phase + ', week=' + (d.display_week ?? '—') +
+                        ', pinned=' + (d.pinned ? d.pinned.games.length : 0));
           "
 
       # Regenerate the embed + preview so the pre-rendered (crawlable) rows
@@ -68,10 +141,10 @@ jobs:
         run: |
           git config user.name  "implied-totals-bot"
           git config user.email "implied-totals-bot@users.noreply.github.com"
-          git add implied-totals.json implied-totals-WP.html index.html
+          git add implied-totals.json implied-totals-WP.html index.html week-openers.json
           if git diff --staged --quiet; then
             echo "no change"
           else
-            git commit -m "chore: refresh implied totals ($(date -u +%Y-%m-%d))"
+            git commit -m "chore: refresh implied totals ($(date -u +%Y-%m-%dT%H:%MZ))"
             git push
           fi
